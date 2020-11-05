@@ -71,22 +71,41 @@ fn evaluate_floats<'a>(words: &[&'a str]) -> Result<Variable, CustomErr> {
 	use Op::*;
 	let mut words: Vec<Op<'a>> = words.iter().map(|x| Unparsed(x)).collect();
 
-	for (str_rep, op) in [("*", Mul), ("/", Div), ("+", Add), ("-", Sub)].iter() {
-		while let Some(mut idx) = words.iter().position(|&x| x == Unparsed("*")) {
-			if idx == 0 {
-				return Err(err());
-			}
-			let left = match words.remove(idx - 1) {
-				Unparsed(s) => Val(evaluate_float(s)?),
-				x => x,
-			};
-			idx -= 1;
-			let right = match words.remove(idx + 1) {
-				Unparsed(s) => Val(evaluate_float(s)?),
-				x => x,
-			};
-			words[idx] = Mul(Box::new(left), Box::new(right));
+	fn get_left_and_right<'a>(idx: &mut usize, words: &mut Vec<Op<'a>>) -> Result<(Op<'a>, Op<'a>), CustomErr> {
+		if *idx == 0 {
+			return Err(err());
 		}
+		let left = match words.remove(*idx - 1) {
+			Unparsed(s) => Val(evaluate_float(s)?),
+			x => x,
+		};
+		*idx -= 1;
+		let right = match words.remove(*idx + 1) {
+			Unparsed(s) => Val(evaluate_float(s)?),
+			x => x,
+		};
+		Ok((left, right))
+	}
+
+	while let Some(mut idx) = words.iter().position(|&x| x == Unparsed("*")) {
+		let (left, right) = get_left_and_right(&mut idx, &mut words)?;
+		words[idx] = Mul(Box::new(left), Box::new(right));
+	}
+	while let Some(mut idx) = words.iter().position(|&x| x == Unparsed("/")) {
+		let (left, right) = get_left_and_right(&mut idx, &mut words)?;
+		words[idx] = Div(Box::new(left), Box::new(right));
+	}
+	while let Some(mut idx) = words.iter().position(|&x| x == Unparsed("+")) {
+		let (left, right) = get_left_and_right(&mut idx, &mut words)?;
+		words[idx] = Add(Box::new(left), Box::new(right));
+	}
+	while let Some(mut idx) = words.iter().position(|&x| x == Unparsed("-")) {
+		let (left, right) = get_left_and_right(&mut idx, &mut words)?;
+		words[idx] = Sub(Box::new(left), Box::new(right));
+	}
+
+	if words.len() != 1 {
+		return Err(err());
 	}
 
 	Ok(Integer(0))
