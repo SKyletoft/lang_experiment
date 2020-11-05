@@ -21,6 +21,7 @@ fn err() -> CustomErr {
 	Box::new(ParseError {})
 }
 
+#[derive(Clone, Debug, PartialEq)]
 enum Variable {
 	Integer(i64),
 	Floating(f64),
@@ -34,8 +35,7 @@ fn evaluate(words: &[&str]) -> Result<Variable, CustomErr> {
 }
 
 fn evaluate_float(num: &str) -> Result<Variable, CustomErr> {
-	if !num.chars().all(|x| ('0' <= x && x <= '9') || x == '.')
-	{
+	if !num.chars().all(|x| ('0' <= x && x <= '9') || x == '.') {
 		return Err(err());
 	}
 	let mut splits = num.split('.');
@@ -53,32 +53,42 @@ fn evaluate_float(num: &str) -> Result<Variable, CustomErr> {
 }
 
 fn trusted_parse_int(string: &str) -> u64 {
-	string.bytes().fold(0, |acc, curr| acc * 10 + (curr - b'0') as u64)
+	string
+		.bytes()
+		.fold(0, |acc, curr| acc * 10 + (curr - b'0') as u64)
 }
 
-fn evaluate_floats(words: &[&str]) -> Result<Variable, CustomErr> {
-	enum Op {
-		Add, Sub, Mul, Div, Val(Variable)
-	}
-	enum Tree {
-		Branch(Op, Box<Tree>),
-		Leaf(Variable)
+fn evaluate_floats<'a>(words: &[&'a str]) -> Result<Variable, CustomErr> {
+	#[derive(Clone, Debug, PartialEq)]
+	enum Op<'a> {
+		Add(Box<Op<'a>>, Box<Op<'a>>),
+		Sub(Box<Op<'a>>, Box<Op<'a>>),
+		Mul(Box<Op<'a>>, Box<Op<'a>>),
+		Div(Box<Op<'a>>, Box<Op<'a>>),
+		Val(Variable),
+		Unparsed(&'a str),
 	}
 	use Op::*;
-	let mut parsed = Vec::new();
-	for &x in words.iter() {
-		parsed.push(match x {
-			"+" => Add,
-			"-" => Sub,
-			"*" => Mul,
-			"/" => Div,
-			_ => {
-				let val = evaluate_float(&x)?;
-				Val(val)
+	let mut words: Vec<Op<'a>> = words.iter().map(|x| Unparsed(x)).collect();
+
+	for (str_rep, op) in [("*", Mul), ("/", Div), ("+", Add), ("-", Sub)].iter() {
+		while let Some(mut idx) = words.iter().position(|&x| x == Unparsed("*")) {
+			if idx == 0 {
+				return Err(err());
 			}
-		});
+			let left = match words.remove(idx - 1) {
+				Unparsed(s) => Val(evaluate_float(s)?),
+				x => x,
+			};
+			idx -= 1;
+			let right = match words.remove(idx + 1) {
+				Unparsed(s) => Val(evaluate_float(s)?),
+				x => x,
+			};
+			words[idx] = Mul(Box::new(left), Box::new(right));
+		}
 	}
-	
+
 	Ok(Integer(0))
 }
 
