@@ -12,25 +12,23 @@ type CustomErr = Box<dyn std::error::Error>;
 
 #[derive(Copy, Clone, Debug)]
 struct ParseError {}
-#[derive(Copy, Clone, Debug)]
-struct TypeError {}
-
 impl std::error::Error for ParseError {}
-impl std::error::Error for TypeError {}
-
 impl fmt::Display for ParseError {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "parse error!")
 	}
 }
+fn perr() -> CustomErr {
+	Box::new(ParseError {})
+}
+
+#[derive(Copy, Clone, Debug)]
+struct TypeError {}
+impl std::error::Error for TypeError {}
 impl fmt::Display for TypeError {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		write!(f, "type error!")
 	}
-}
-
-fn perr() -> CustomErr {
-	Box::new(ParseError {})
 }
 fn terr() -> CustomErr {
 	Box::new(TypeError {})
@@ -48,7 +46,15 @@ fn create_variable(
 		"num" => floats::evaluate_floats(&words[3..], &variables)?,
 		"bool" => bools::evaluate_bools(&words[3..], &variables)?,
 		"list" => unimplemented!(),
-		_ => unimplemented!(),
+		_ => {
+			if let Ok(res) = floats::evaluate_floats(&words[2..], &variables) {
+				res
+			} else if let Ok(res) = bools::evaluate_bools(&words[2..], &variables) {
+				res
+			} else {
+				return Err(perr());
+			}
+		}
 	};
 	variables.insert(name, new);
 	Ok(())
