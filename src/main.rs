@@ -1,11 +1,9 @@
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 use std::io;
 
-pub mod file;
 pub mod bools;
 pub mod errors;
+pub mod file;
 pub mod floats;
 pub mod helper;
 pub mod variable;
@@ -98,7 +96,7 @@ fn create_function(
 	creating_function: &mut isize,
 	index: usize,
 ) -> Result<Variable, CustomErr> {
-	if words.len() % 2 == 0 || words.len() == 1 {
+	if words.len() % 2 == 0 {
 		return Err(serr());
 	}
 	let name = words[0].to_owned();
@@ -136,6 +134,35 @@ fn exit_function(
 	Ok(return_value)
 }
 
+fn function_call (
+	words: &[&str],
+	variables: &mut HashMap<String, Variable>,
+	functions: &HashMap<String, (Vec<(String, VariableT)>, usize)>,
+	call_stack: &mut Vec<(HashMap<String, Variable>, usize)>,
+	index: usize,
+	jump_next: &mut Option<usize>,
+) -> Result<Variable, CustomErr> {
+	let (args_req, pointer) = functions.get(words[0]).ok_or_else(perr)?;
+	let args = helper::split(&words[1][1..words[1].len() - 1]);
+	let mut new_vars = HashMap::new();
+	new_vars.insert("last".to_string(), Boolean(false));
+	for ((name, typ), &arg) in args_req.iter().zip(args.iter()) {
+		let split = helper::split(arg);
+		let parsed = match typ {
+			NumberT => floats::evaluate_floats(&split, variables)?,
+			BooleanT => bools::evaluate_bools(&split, variables)?,
+			//CharT => floats::evaluate_floats(arg, variables)?,
+			//ListT(_)
+			_ => return Err(perr()),
+		};
+		new_vars.insert(name.to_string(), parsed);
+	}
+	call_stack.push((variables.clone(), index));
+	*variables = new_vars;
+	*jump_next = Some(*pointer);
+	Ok(Boolean(false))
+}
+
 fn solve_function_or_variable(
 	words: &[&str],
 	variables: &mut HashMap<String, Variable>,
@@ -144,28 +171,16 @@ fn solve_function_or_variable(
 	index: usize,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
+	//dbg!(words);
 	if words.len() == 1 {
 		Ok(variables.get(words[0]).ok_or_else(perr)?.clone())
 	} else {
-		let (args_req, pointer) = functions.get(words[0]).ok_or_else(perr)?;
-		let args = helper::split(&words[1][1..words[1].len() - 1]);
-		let mut new_vars = HashMap::new();
-		new_vars.insert("last".to_string(), Boolean(false));
-		for ((name, typ), &arg) in args_req.iter().zip(args.iter()) {
-			let parsed = match typ {
-				NumberT => floats::evaluate_floats(&helper::split(arg), variables)?,
-				BooleanT => bools::evaluate_bools(&helper::split(arg), variables)?,
-				//CharT => floats::evaluate_floats(arg, variables)?,
-				//ListT(_)
-				_ => return Err(perr()),
-			};
-			new_vars.insert(name.to_string(), parsed);
+		let call = function_call(words, variables, functions, call_stack, index, jump_next);
+		if call.is_ok() {
+			call
+		} else {
+			variable::evaluate_statement(words, variables)
 		}
-		call_stack.push((variables.clone(), index));
-		*variables = new_vars;
-		*jump_next = Some(*pointer);
-
-		Ok(Boolean(false))
 	}
 }
 
@@ -187,8 +202,10 @@ fn main() -> Result<(), CustomErr> {
 		if words.is_empty() {
 			continue;
 		}
-		if creating_function >= 1 && words[0].trim() == "end" {
-			creating_function -= 1;
+		if creating_function >= 1 {
+			if words[0].trim() == "end" {
+				creating_function -= 1;
+			}
 			continue;
 		}
 		let result = match words[0] {

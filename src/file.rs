@@ -6,7 +6,7 @@ pub struct Code {
 }
 
 impl Code {
-	pub fn from_file(files: &[&str]) -> Code {
+	pub fn from_file(_files: &[&str]) -> Code {
 		unimplemented!()
 	}
 
@@ -16,7 +16,7 @@ impl Code {
 			index: 0,
 		}
 	}
-	
+
 	pub fn next(&'_ mut self) -> Result<&'_ str, CustomErr> {
 		self.index += 1;
 		while self.index >= self.code.len() {
