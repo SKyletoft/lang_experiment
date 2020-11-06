@@ -11,8 +11,8 @@ use errors::*;
 use variable::{evaluate_statement, Variable, Variable::*, VariableT, VariableT::*};
 
 fn create_variable(
-	variables: &mut HashMap<String, Variable>,
 	words: &[&str],
+	variables: &mut HashMap<String, Variable>,
 ) -> Result<Variable, CustomErr> {
 	if words.is_empty() || words.len() == 2 || words.get(0) == Some(&"last") {
 		return Err(perr());
@@ -36,11 +36,23 @@ fn create_variable(
 	Ok(new)
 }
 
-fn if_statement() -> Result<Variable, CustomErr> {
-	Ok(Boolean(false))
+fn if_statement(
+	words: &[&str],
+	variables: &HashMap<String, Variable>,
+	skipping_if: &mut isize,
+) -> Result<Variable, CustomErr> {
+	dbg!(words);
+	if let Boolean(b) = bools::evaluate_bools(words, variables)? {
+		if !b {
+			*skipping_if += 1;
+		}
+		Ok(Boolean(b))
+	} else {
+		Err(serr())
+	}
 }
 
-fn print(variables: &mut HashMap<String, Variable>, words: &[&str]) -> Result<Variable, CustomErr> {
+fn print(words: &[&str], variables: &mut HashMap<String, Variable>) -> Result<Variable, CustomErr> {
 	print!("> ");
 	for &word in words {
 		let result = variables.get(word).ok_or_else(perr)?;
@@ -68,8 +80,8 @@ fn clear() -> Result<Variable, CustomErr> {
 }
 
 fn create_labels(
-	labels: &mut HashMap<String, usize>,
 	words: &[&str],
+	labels: &mut HashMap<String, usize>,
 	index: usize,
 ) -> Result<Variable, CustomErr> {
 	if words.is_empty() {
@@ -80,9 +92,9 @@ fn create_labels(
 }
 
 fn jump(
+	words: &[&str],
 	labels: &HashMap<String, usize>,
 	jump_next: &mut Option<usize>,
-	words: &[&str],
 ) -> Result<Variable, CustomErr> {
 	if words.is_empty() {
 		return Err(perr());
@@ -92,11 +104,28 @@ fn jump(
 	Ok(Boolean(true))
 }
 
-fn create_function(
-	functions: &mut HashMap<String, (Vec<(String, VariableT)>, usize)>,
+fn jump_rel(
 	words: &[&str],
-	creating_function: &mut isize,
+	variables: &HashMap<String, Variable>,
 	index: usize,
+	jump_next: &mut Option<usize>,
+) -> Result<Variable, CustomErr> {
+	if words.is_empty() {
+		return Err(perr());
+	}
+	if let Number(n) = floats::evaluate_floats(words, variables)? {
+		*jump_next = Some((index as isize).saturating_add(n as isize) as usize);
+		Ok(Number(n))
+	} else {
+		Err(serr())
+	}
+}
+
+fn create_function(
+	words: &[&str],
+	functions: &mut HashMap<String, (Vec<(String, VariableT)>, usize)>,
+	index: usize,
+	creating_function: &mut isize,
 ) -> Result<Variable, CustomErr> {
 	if words.len() % 2 == 0 {
 		return Err(serr());
@@ -122,8 +151,8 @@ fn create_function(
 }
 
 fn exit_function(
-	call_stack: &mut Vec<(HashMap<String, Variable>, usize)>,
 	variables: &mut HashMap<String, Variable>,
+	call_stack: &mut Vec<(HashMap<String, Variable>, usize)>,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
 	if call_stack.is_empty() {
@@ -199,6 +228,7 @@ fn main() -> Result<(), CustomErr> {
 	let mut jump_next: Option<usize> = None;
 	let mut code = file::Code::new();
 	let mut creating_function: isize = 0;
+	let mut skipping_if: isize = 0;
 
 	variables.insert("last".to_owned(), Boolean(false));
 
@@ -206,6 +236,7 @@ fn main() -> Result<(), CustomErr> {
 		let index = code.index + 1;
 		let (input_line, interactive) = code.next()?;
 		let words = helper::split(input_line.trim());
+
 		if words.is_empty() {
 			continue;
 		}
@@ -215,16 +246,29 @@ fn main() -> Result<(), CustomErr> {
 			}
 			continue;
 		}
+		if skipping_if >= 0 {
+			match words[0].trim() {
+				"endif" if skipping_if == 1 => {
+					skipping_if = 0;
+					continue;
+				}
+				"endif" => skipping_if -= 1,
+				"if" => skipping_if += 1,
+				_ => {}
+			}
+		}
+
 		let result = match words[0] {
-			"let" => create_variable(&mut variables, &words[1..]),
-			"if" => if_statement(),
-			"print" => print(&mut variables, &words[1..]),
+			"let" => create_variable(&words[1..], &mut variables),
+			"if" => if_statement(&words[1..], &variables, &mut skipping_if),
+			"print" => print(&words[1..], &mut variables),
 			"clear" => clear(),
-			"label" => create_labels(&mut labels, &words[1..], index),
-			"jump" => jump(&labels, &mut jump_next, &words[1..]),
+			"label" => create_labels(&words[1..], &mut labels, index),
+			"jump" => jump(&words[1..], &labels, &mut jump_next),
+			"jump_rel" => jump_rel(&words[1..], &variables, index, &mut jump_next),
 			"type" => print_type(evaluate_statement(&words[1..], &variables)?),
-			"end" => exit_function(&mut call_stack, &mut variables, &mut jump_next),
-			"fn" => create_function(&mut functions, &words[1..], &mut creating_function, index),
+			"end" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
+			"fn" => create_function(&words[1..], &mut functions, index, &mut creating_function),
 			_ => solve_function_or_variable(
 				&words,
 				&mut variables,
