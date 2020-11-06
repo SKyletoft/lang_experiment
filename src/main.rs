@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::io;
 
+pub mod file;
 pub mod bools;
 pub mod errors;
 pub mod floats;
@@ -76,29 +77,6 @@ fn create_labels(
 	}
 	labels.insert(words[0].to_string(), index);
 	Ok(Boolean(true))
-}
-
-struct Code {
-	code: Vec<String>,
-	index: usize,
-}
-
-impl Code {
-	fn new() -> Self {
-		Code {
-			code: vec![String::new()],
-			index: 0,
-		}
-	}
-	fn next(&'_ mut self) -> Result<&'_ str, CustomErr> {
-		self.index += 1;
-		while self.index >= self.code.len() {
-			let mut input_line = String::new();
-			io::stdin().read_line(&mut input_line)?;
-			self.code.push(input_line);
-		}
-		Ok(&self.code[self.index])
-	}
 }
 
 fn jump(
@@ -197,7 +175,7 @@ fn main() -> Result<(), CustomErr> {
 	let mut functions: HashMap<String, (Vec<(String, VariableT)>, usize)> = HashMap::new();
 	let mut call_stack: Vec<(HashMap<String, Variable>, usize)> = Vec::new();
 	let mut jump_next: Option<usize> = None;
-	let mut code = Code::new();
+	let mut code = file::Code::new();
 	let mut creating_function: isize = 0;
 
 	variables.insert("last".to_owned(), Boolean(false));
