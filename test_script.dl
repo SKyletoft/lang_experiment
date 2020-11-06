@@ -12,10 +12,10 @@ end
 
 let original = 0
 foo(original)
-let step_one = last
+let step_one
 bar(original)
-let step_two = last
+let step_two
 bar(step_one)
-let step_three = last
+let step_three
 
 print step_one step_two step_three

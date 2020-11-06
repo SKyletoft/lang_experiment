@@ -17,14 +17,16 @@ impl Code {
 		}
 	}
 
-	pub fn next(&'_ mut self) -> Result<&'_ str, CustomErr> {
+	pub fn next(&'_ mut self) -> Result<(&'_ str, bool), CustomErr> {
 		self.index += 1;
+		let mut interactive = false;
 		while self.index >= self.code.len() {
 			let mut input_line = String::new();
 			io::stdin().read_line(&mut input_line)?;
 			self.code.push(input_line);
+			interactive = true;
 		}
-		Ok(&self.code[self.index])
+		Ok((&self.code[self.index], interactive))
 	}
 }
 

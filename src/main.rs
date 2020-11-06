@@ -14,12 +14,14 @@ fn create_variable(
 	variables: &mut HashMap<String, Variable>,
 	words: &[&str],
 ) -> Result<Variable, CustomErr> {
-	if words[0] == "last" {
+	if words.is_empty() || words.len() == 2 || words.get(0) == Some(&"last") {
 		return Err(perr());
 	}
-	let new = if words[1] == "=" {
+	let new = if words.len() == 1 {
+		variables.get("last").ok_or_else(serr)?.clone()
+	} else if words.get(1) == Some(&"=") {
 		variable::evaluate_statement(&words[2..], variables)?
-	} else if words[2] == "=" {
+	} else if words.get(2) == Some(&"=") {
 		match words[1].parse::<VariableT>()? {
 			NumberT => floats::evaluate_floats(&words[3..], &variables)?,
 			BooleanT => bools::evaluate_bools(&words[3..], &variables)?,
@@ -134,7 +136,7 @@ fn exit_function(
 	Ok(return_value)
 }
 
-fn function_call (
+fn function_call(
 	words: &[&str],
 	variables: &mut HashMap<String, Variable>,
 	functions: &HashMap<String, (Vec<(String, VariableT)>, usize)>,
@@ -173,7 +175,12 @@ fn solve_function_or_variable(
 ) -> Result<Variable, CustomErr> {
 	//dbg!(words);
 	if words.len() == 1 {
-		Ok(variables.get(words[0]).ok_or_else(perr)?.clone())
+		let res = variables.get(words[0]).ok_or_else(perr);
+		if res.is_ok() {
+			Ok(res?.clone())
+		} else {
+			variable::evaluate_statement(words, variables)
+		}
 	} else {
 		let call = function_call(words, variables, functions, call_stack, index, jump_next);
 		if call.is_ok() {
@@ -197,7 +204,7 @@ fn main() -> Result<(), CustomErr> {
 
 	loop {
 		let index = code.index + 1;
-		let input_line = code.next()?;
+		let (input_line, interactive) = code.next()?;
 		let words = helper::split(input_line.trim());
 		if words.is_empty() {
 			continue;
@@ -228,6 +235,9 @@ fn main() -> Result<(), CustomErr> {
 			),
 		};
 		if let Ok(last) = result {
+			if interactive && creating_function == 0 && call_stack.is_empty() {
+				println!("> {}", &last);
+			}
 			*variables.get_mut("last").ok_or_else(serr)? = last;
 		} else {
 			println!("{:?}", result);
