@@ -1,4 +1,5 @@
-use crate::variable::Variable::*;
+use Variable::*;
+use VariableT::*;
 use crate::*;
 
 use std::collections::HashMap;
@@ -20,6 +21,29 @@ impl fmt::Display for Variable {
 			Char(c) => write!(f, "{}", c),
 			List(l) => write!(f, "{:?}", l),
 		}
+	}
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum VariableT {
+	BooleanT,
+	NumberT,
+	CharT,
+	ListT(Box<VariableT>),
+}
+
+impl std::str::FromStr for VariableT {
+	type Err = SyntaxError;
+	fn from_str(s: &str) -> Result<Self, Self::Err> {
+		let res  = match s.trim() {
+			"f64" => NumberT,
+			"num" => NumberT,
+			"bool" => BooleanT,
+			"char" => CharT,
+			//"list" => ListT()
+			_ => return Err(SyntaxError {})
+		};
+		Ok(res)
 	}
 }
 

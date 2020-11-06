@@ -58,7 +58,9 @@ fn get_right<'a>(
 	Ok(right)
 }
 fn parse_or_get(s: &str, variables: &HashMap<String, Variable>) -> Result<Variable, CustomErr> {
-	if let Ok(n) = evaluate_bool(s) {
+	if s.as_bytes()[0] == b'(' {
+		Ok(evaluate_bools(&helper::split(&s[1..s.len() - 1]), variables)?)
+	} else if let Ok(n) = evaluate_bool(s) {
 		Ok(n)
 	} else if let Some(n) = variables.get(s) {
 		Ok(n.clone())

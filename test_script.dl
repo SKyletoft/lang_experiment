@@ -1,0 +1,21 @@
+fn foo a num
+a + 345
+end
+
+fn bar a num
+let x = 5
+print x
+a - 15
+end
+
+
+
+let original = 0
+foo(original)
+let step_one = last
+bar(original)
+let step_two = last
+bar(step_one)
+let step_three = last
+
+print step_one step_two step_three
