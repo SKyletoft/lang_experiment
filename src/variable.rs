@@ -52,16 +52,20 @@ impl std::str::FromStr for VariableT {
 
 impl fmt::Display for VariableT {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(
-			f,
-			"{}",
-			match self {
-				NumberT => "Number",
-				ListT(_) => "List of _", //THIS IS TOTALLY SOLVABLE. BUT I MIGHT COMPLETELY CHANGE HOW LISTS WORK
-				CharT => "Char",
-				BooleanT => "Boolean",
-			}
-		)
+		if let ListT(t) = self {
+			write!(f, "List of {}", t)
+		} else {
+			write!(
+				f,
+				"{}",
+				match self {
+					NumberT => "Number",
+					CharT => "Char",
+					BooleanT => "Boolean",
+					ListT(_) => unreachable!(),
+				}
+			)
+		}
 	}
 }
 
