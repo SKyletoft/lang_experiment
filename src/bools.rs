@@ -2,7 +2,6 @@ use crate::{
 	variable::{Variable::*, *},
 	*,
 };
-use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
 enum Op<'a> {
@@ -27,7 +26,7 @@ fn evaluate_bool(b: &str) -> Result<Variable, CustomErr> {
 fn get_left_and_right<'a>(
 	idx: &mut usize,
 	words: &mut Vec<Op<'a>>,
-	variables: &HashMap<String, Variable>,
+	variables: &Variables,
 ) -> Result<(Op<'a>, Op<'a>), CustomErr> {
 	if *idx == 0 {
 		return Err(perr());
@@ -43,10 +42,11 @@ fn get_left_and_right<'a>(
 	};
 	Ok((left, right))
 }
+
 fn get_right<'a>(
 	idx: &usize,
 	words: &mut Vec<Op<'a>>,
-	variables: &HashMap<String, Variable>,
+	variables: &Variables,
 ) -> Result<Op<'a>, CustomErr> {
 	if *idx >= words.len() - 1 {
 		return Err(perr());
@@ -57,7 +57,8 @@ fn get_right<'a>(
 	};
 	Ok(right)
 }
-fn parse_or_get(s: &str, variables: &HashMap<String, Variable>) -> Result<Variable, CustomErr> {
+
+fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	if s.as_bytes()[0] == b'(' {
 		Ok(evaluate_bools(&helper::split(&s[1..s.len() - 1]), variables)?)
 	} else if let Ok(n) = evaluate_bool(s) {
@@ -68,7 +69,8 @@ fn parse_or_get(s: &str, variables: &HashMap<String, Variable>) -> Result<Variab
 		Err(perr())
 	}
 }
-fn eval_op(op: Op<'_>, variables: &HashMap<String, Variable>) -> Result<bool, CustomErr> {
+
+fn eval_op(op: Op<'_>, variables: &Variables) -> Result<bool, CustomErr> {
 	//dbg!(&op);
 	Ok(match op {
 		And(l, r) => eval_op(*l, variables)? && eval_op(*r, variables)?,
@@ -87,9 +89,10 @@ fn eval_op(op: Op<'_>, variables: &HashMap<String, Variable>) -> Result<bool, Cu
 		_ => return Err(perr()),
 	})
 }
+
 pub fn evaluate_bools<'a>(
 	words: &[&'a str],
-	variables: &HashMap<String, Variable>,
+	variables: &Variables,
 ) -> Result<Variable, CustomErr> {
 	let mut words: Vec<Op<'a>> = words.iter().map(|x| Unparsed(x)).collect();
 

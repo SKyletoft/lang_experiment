@@ -2,7 +2,6 @@ use crate::{
 	variable::{Variable::*, *},
 	*,
 };
-use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
 enum Op<'a> {
@@ -38,10 +37,11 @@ fn trusted_parse_int(string: &str) -> u64 {
 		.bytes()
 		.fold(0, |acc, curr| acc * 10 + (curr - b'0') as u64)
 }
+
 fn get_left_and_right<'a>(
 	idx: &mut usize,
 	words: &mut Vec<Op<'a>>,
-	variables: &HashMap<String, Variable>,
+	variables: &Variables,
 ) -> Result<(Op<'a>, Op<'a>), CustomErr> {
 	if *idx == 0 {
 		return Err(perr());
@@ -57,7 +57,8 @@ fn get_left_and_right<'a>(
 	};
 	Ok((left, right))
 }
-fn parse_or_get(s: &str, variables: &HashMap<String, Variable>) -> Result<Variable, CustomErr> {
+
+fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	if s.as_bytes()[0] == b'(' {
 		Ok(evaluate_floats(&helper::split(&s[1..s.len() - 1]), variables)?)
 	} else if let Ok(n) = evaluate_float(s) {
@@ -68,7 +69,8 @@ fn parse_or_get(s: &str, variables: &HashMap<String, Variable>) -> Result<Variab
 		Err(perr())
 	}
 }
-fn eval_op(op: Op<'_>, variables: &HashMap<String, Variable>) -> Result<f64, CustomErr> {
+
+fn eval_op(op: Op<'_>, variables: &Variables) -> Result<f64, CustomErr> {
 	//dbg!(&op);
 	Ok(match op {
 		Add(l, r) => eval_op(*l, variables)? + eval_op(*r, variables)?,
@@ -86,9 +88,10 @@ fn eval_op(op: Op<'_>, variables: &HashMap<String, Variable>) -> Result<f64, Cus
 		_ => return Err(perr()),
 	})
 }
+
 pub fn evaluate_floats<'a>(
 	words: &[&'a str],
-	variables: &HashMap<String, Variable>,
+	variables: &Variables,
 ) -> Result<Variable, CustomErr> {
 	let mut words: Vec<Op<'a>> = words.iter().map(|x| Unparsed(x)).collect();
 

@@ -6,4 +6,5 @@ let a = 0
 inc(a)
 let a
 print a
-jump_rel 0 - 4
+jump_rel 2
+jump_rel 0 - 5

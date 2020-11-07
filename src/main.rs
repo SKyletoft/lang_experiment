@@ -6,14 +6,14 @@ pub mod errors;
 pub mod file;
 pub mod floats;
 pub mod helper;
+pub mod list;
 pub mod variable;
 use errors::*;
-use variable::{evaluate_statement, Variable, Variable::*, VariableT, VariableT::*};
+use variable::{
+	CallStack, Functions, Labels, Variable, Variable::*, VariableT, VariableT::*, Variables,
+};
 
-fn create_variable(
-	words: &[&str],
-	variables: &mut HashMap<String, Variable>,
-) -> Result<Variable, CustomErr> {
+fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
 	if words.is_empty() || words.len() == 2 || words.get(0) == Some(&"last") {
 		return Err(perr());
 	}
@@ -38,7 +38,7 @@ fn create_variable(
 
 fn if_statement(
 	words: &[&str],
-	variables: &HashMap<String, Variable>,
+	variables: &Variables,
 	skipping_if: &mut isize,
 ) -> Result<Variable, CustomErr> {
 	dbg!(words);
@@ -52,7 +52,7 @@ fn if_statement(
 	}
 }
 
-fn print(words: &[&str], variables: &mut HashMap<String, Variable>) -> Result<Variable, CustomErr> {
+fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	print!("> ");
 	for &word in words {
 		let result = variables.get(word).ok_or_else(perr)?;
@@ -63,15 +63,7 @@ fn print(words: &[&str], variables: &mut HashMap<String, Variable>) -> Result<Va
 }
 
 fn print_type(var: Variable) -> Result<Variable, CustomErr> {
-	println!(
-		"> {}",
-		match var {
-			Number(_) => "Number",
-			List(_) => "List of _", //THIS IS TOTALLY SOLVABLE. BUT I MIGHT COMPLETELY CHANGE HOW LISTS WORK
-			Char(_) => "Char",
-			Boolean(_) => "Boolean",
-		}
-	);
+	println!("> {}", variable::to_type(&var));
 	Ok(var)
 }
 
@@ -79,11 +71,7 @@ fn clear() -> Result<Variable, CustomErr> {
 	Ok(Boolean(true))
 }
 
-fn create_labels(
-	words: &[&str],
-	labels: &mut HashMap<String, usize>,
-	index: usize,
-) -> Result<Variable, CustomErr> {
+fn create_labels(words: &[&str], labels: &mut Labels, index: usize) -> Result<Variable, CustomErr> {
 	if words.is_empty() {
 		return Err(perr());
 	}
@@ -93,7 +81,7 @@ fn create_labels(
 
 fn jump(
 	words: &[&str],
-	labels: &HashMap<String, usize>,
+	labels: &Labels,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
 	if words.is_empty() {
@@ -106,7 +94,7 @@ fn jump(
 
 fn jump_rel(
 	words: &[&str],
-	variables: &HashMap<String, Variable>,
+	variables: &Variables,
 	index: usize,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
@@ -123,7 +111,7 @@ fn jump_rel(
 
 fn create_function(
 	words: &[&str],
-	functions: &mut HashMap<String, (Vec<(String, VariableT)>, usize)>,
+	functions: &mut Functions,
 	index: usize,
 	creating_function: &mut isize,
 ) -> Result<Variable, CustomErr> {
@@ -151,8 +139,8 @@ fn create_function(
 }
 
 fn exit_function(
-	variables: &mut HashMap<String, Variable>,
-	call_stack: &mut Vec<(HashMap<String, Variable>, usize)>,
+	variables: &mut Variables,
+	call_stack: &mut CallStack,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
 	if call_stack.is_empty() {
@@ -167,9 +155,9 @@ fn exit_function(
 
 fn function_call(
 	words: &[&str],
-	variables: &mut HashMap<String, Variable>,
-	functions: &HashMap<String, (Vec<(String, VariableT)>, usize)>,
-	call_stack: &mut Vec<(HashMap<String, Variable>, usize)>,
+	variables: &mut Variables,
+	functions: &Functions,
+	call_stack: &mut CallStack,
 	index: usize,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
@@ -196,13 +184,12 @@ fn function_call(
 
 fn solve_function_or_variable(
 	words: &[&str],
-	variables: &mut HashMap<String, Variable>,
-	functions: &HashMap<String, (Vec<(String, VariableT)>, usize)>,
-	call_stack: &mut Vec<(HashMap<String, Variable>, usize)>,
+	variables: &mut Variables,
+	functions: &Functions,
+	call_stack: &mut CallStack,
 	index: usize,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
-	//dbg!(words);
 	if words.len() == 1 {
 		let res = variables.get(words[0]).ok_or_else(perr);
 		if res.is_ok() {
@@ -221,10 +208,10 @@ fn solve_function_or_variable(
 }
 
 fn main() -> Result<(), CustomErr> {
-	let mut variables: HashMap<String, Variable> = HashMap::new();
-	let mut labels: HashMap<String, usize> = HashMap::new();
-	let mut functions: HashMap<String, (Vec<(String, VariableT)>, usize)> = HashMap::new();
-	let mut call_stack: Vec<(HashMap<String, Variable>, usize)> = Vec::new();
+	let mut variables: Variables = HashMap::new();
+	let mut labels: Labels = HashMap::new();
+	let mut functions: Functions = HashMap::new();
+	let mut call_stack: CallStack = Vec::new();
 	let mut jump_next: Option<usize> = None;
 	let mut code = file::Code::new();
 	let mut creating_function: isize = 0;
@@ -261,12 +248,12 @@ fn main() -> Result<(), CustomErr> {
 		let result = match words[0] {
 			"let" => create_variable(&words[1..], &mut variables),
 			"if" => if_statement(&words[1..], &variables, &mut skipping_if),
-			"print" => print(&words[1..], &mut variables),
+			"print" => print(&words[1..], &variables),
 			"clear" => clear(),
 			"label" => create_labels(&words[1..], &mut labels, index),
 			"jump" => jump(&words[1..], &labels, &mut jump_next),
 			"jump_rel" => jump_rel(&words[1..], &variables, index, &mut jump_next),
-			"type" => print_type(evaluate_statement(&words[1..], &variables)?),
+			"type" => print_type(variable::evaluate_statement(&words[1..], &variables)?),
 			"end" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
 			"fn" => create_function(&words[1..], &mut functions, index, &mut creating_function),
 			_ => solve_function_or_variable(
