@@ -1,7 +1,4 @@
-use crate::{
-	variable::{Variable::*, *},
-	*,
-};
+use crate::*;
 
 #[derive(Clone, Debug, PartialEq)]
 enum Op<'a> {
@@ -60,7 +57,7 @@ fn get_left_and_right<'a>(
 
 fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	if s.as_bytes()[0] == b'(' {
-		Ok(evaluate_floats(&helper::split(&s[1..s.len() - 1]), variables)?)
+		Ok(evaluate_floats(&helper::split(helper::remove_parens(s)), variables)?)
 	} else if let Ok(n) = evaluate_float(s) {
 		Ok(n)
 	} else if let Some(n) = variables.get(s) {

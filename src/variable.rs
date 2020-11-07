@@ -1,6 +1,4 @@
 use crate::*;
-use Variable::*;
-use VariableT::*;
 
 use std::collections::HashMap;
 use std::fmt;
