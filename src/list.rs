@@ -29,7 +29,10 @@ pub fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, 
 	Ok(List(typ, vec))
 }
 
-pub fn parse_list_and_index(list: Variable, index: Variable) -> Result<(VariableT, Vec<Variable>, usize), CustomErr> {
+pub fn parse_list_and_index(
+	list: Variable,
+	index: Variable,
+) -> Result<(VariableT, Vec<Variable>, usize), CustomErr> {
 	if let (List(t, vec), Number(i)) = (list, index) {
 		let index = i as usize;
 		if vec.len() < index {

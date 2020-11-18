@@ -1,3 +1,5 @@
-let x num = 5
-let y num = x + 2
-print x y
+let x = 5
+label a
+let x = x + 1
+print x
+jump a

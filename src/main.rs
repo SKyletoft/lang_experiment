@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::io;
+use std::{io, io::Write};
 
 pub mod bools;
 pub mod errors;
@@ -13,9 +13,16 @@ use variable::{
 	CallStack, Functions, Labels, Variable, Variable::*, VariableT, VariableT::*, Variables,
 };
 
+const KEYWORDS: [&'static str; 11] = [
+	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn",
+];
+
 fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
 	if words.is_empty() || words.len() == 2 || words.get(0) == Some(&"last") {
 		return Err(perr());
+	}
+	if !variable::is_ok(words[0]) {
+		return Err(serr());
 	}
 	let new = if words.len() == 1 {
 		variables.get("last").ok_or_else(serr)?.clone()
@@ -53,12 +60,14 @@ fn if_statement(
 }
 
 fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	print!("> ");
+	let stdout = io::stdout();
+	let mut lock = stdout.lock();
+	write!(lock, "> ")?;
 	for &word in words {
 		let result = variables.get(word).ok_or_else(perr)?;
-		print!("{} ", result);
+		write!(lock, "{} ", result)?;
 	}
-	println!();
+	writeln!(lock)?;
 	Ok(Boolean(true))
 }
 
@@ -116,6 +125,9 @@ fn create_function(
 	creating_function: &mut isize,
 ) -> Result<Variable, CustomErr> {
 	if words.len() % 2 == 0 {
+		return Err(serr());
+	}
+	if !variable::is_ok(words[0]) {
 		return Err(serr());
 	}
 	let name = words[0].to_owned();
@@ -245,17 +257,18 @@ fn main() -> Result<(), CustomErr> {
 			}
 		}
 
+		let rest = &words[1..];
 		let result = match words[0] {
-			"let" => create_variable(&words[1..], &mut variables),
-			"if" => if_statement(&words[1..], &variables, &mut skipping_if),
-			"print" => print(&words[1..], &variables),
+			"let" => create_variable(rest, &mut variables),
+			"if" => if_statement(rest, &variables, &mut skipping_if),
+			"print" => print(rest, &variables),
 			"clear" => clear(),
-			"label" => create_labels(&words[1..], &mut labels, index),
-			"jump" => jump(&words[1..], &labels, &mut jump_next),
-			"jump_rel" => jump_rel(&words[1..], &variables, index, &mut jump_next),
-			"type" => print_type(variable::evaluate_statement(&words[1..], &variables)?),
+			"label" => create_labels(rest, &mut labels, index),
+			"jump" => jump(rest, &labels, &mut jump_next),
+			"jump_rel" => jump_rel(rest, &variables, index, &mut jump_next),
+			"type" => print_type(variable::evaluate_statement(rest, &variables)?),
 			"end" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
-			"fn" => create_function(&words[1..], &mut functions, index, &mut creating_function),
+			"fn" => create_function(rest, &mut functions, index, &mut creating_function),
 			_ => solve_function_or_variable(
 				&words,
 				&mut variables,

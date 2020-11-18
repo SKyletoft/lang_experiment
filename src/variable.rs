@@ -89,3 +89,7 @@ pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Varia
 	}
 	Err(perr())
 }
+
+pub fn is_ok(name: &str) -> bool {
+	KEYWORDS.contains(&name)
+}

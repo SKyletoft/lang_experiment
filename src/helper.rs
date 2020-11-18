@@ -3,45 +3,67 @@ pub fn split(s: &'_ str) -> Vec<&'_ str> {
 	let mut parentheses = 0;
 	let mut brackets = 0;
 	let mut start = 0;
+	let mut quotes = 0;
+	let mut escape = false;
 	for (i, c) in s.char_indices() {
-		if brackets == 0 {
-			if c == '(' {
-				if parentheses == 0 {
-					vec.push(&s[start..i]);
-					start = i;
-				}
-				parentheses += 1;
-				continue;
-			}
-			if c == ')' {
-				if parentheses == 1 {
-					vec.push(&s[start..=i]);
-					start = i + 1;
-				}
-				parentheses -= 1;
-			}
-		}
-		if parentheses == 0 {
-			if c == '[' {
-				if brackets == 0 {
-					vec.push(&s[start..i]);
-					start = i;
-				}
+		match (brackets, parentheses, quotes, c) {
+			(0, 0, 0, '[') => {
+				vec.push(&s[start..i]);
+				start = i;
 				brackets += 1;
-				continue;
 			}
-			if c == ']' {
-				if brackets == 1 {
-					vec.push(&s[start..=i]);
-					start = i + 1;
-				}
+			(_, 0, 0, '[') => {
+				brackets += 1;
+			}
+			(1, 0, 0, ']') => {
+				vec.push(&s[start..=i]);
+				start = i + 1;
 				brackets -= 1;
 			}
+			(0, 0, 0, ']') => {
+				brackets -= 1;
+			}
+
+			(0, 0, 0, '(') => {
+				vec.push(&s[start..i]);
+				start = i;
+				parentheses += 1;
+			}
+			(0, 0, _, '(') => {
+				parentheses += 1;
+			}
+			(0, 0, 1, ')') => {
+				vec.push(&s[start..=i]);
+				start = i + 1;
+				parentheses -= 1;
+			}
+			(0, 0, 0, ')') => {
+				parentheses -= 1;
+			}
+			
+			(0, 0, 0, '"') if !escape => {
+				vec.push(&s[start..i]);
+				start = i;
+				quotes += 1;
+			}
+			(0, 1, 0, '"') if !escape => {
+				vec.push(&s[start..=i]);
+				start = i + 1;
+				quotes -= 1;
+			}
+
+			(0, 0, 0, _) if c.is_whitespace() => {
+				vec.push(&s[start..i]);
+				start = i + 1;
+			}
+
+			(0, 1, 0, '\\') => {
+				escape = true;
+				continue;
+			}
+			_ => {}
 		}
-		if c.is_whitespace() && parentheses == 0 && brackets == 0 {
-			vec.push(&s[start..i]);
-			start = i + 1;
-		}
+		escape = false;
 	}
 	vec.push(&s[start..]);
 	vec.retain(|slice| slice.chars().any(|c| !c.is_whitespace()));
