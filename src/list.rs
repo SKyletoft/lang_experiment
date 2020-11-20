@@ -11,20 +11,21 @@ pub fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, 
 
 	let mut vec = Vec::new();
 	let typ;
-	let split = helper::split(helper::remove_parens(word));
+	let split = helper::split(helper::remove_parens(word))?;
 	let mut iter = split.iter();
 	if let Some(&var) = iter.next() {
-		let parsed = variable::evaluate_statement(&helper::split(var), variables)?;
+		let parsed = variable::evaluate_statement(&helper::split(var)?, variables)?;
 		typ = variable::to_type(&parsed);
 		vec.push(parsed);
 	} else {
 		return Err(perr());
 	}
 	for &token in iter {
-		let parsed = variable::evaluate_statement(&helper::split(token), variables)?;
+		let parsed = variable::evaluate_statement(&helper::split(token)?, variables)?;
 		if variable::to_type(&parsed) != typ {
 			return Err(perr());
 		}
+		vec.push(parsed);
 	}
 	Ok(List(typ, vec))
 }
@@ -33,15 +34,23 @@ pub fn parse_list_and_index(
 	list: Variable,
 	index: Variable,
 ) -> Result<(VariableT, Vec<Variable>, usize), CustomErr> {
+	dbg!(&list);
+	dbg!(&index);
 	if let (List(t, vec), Number(i)) = (list, index) {
+		eprintln!("Types correct");
 		let index = i as usize;
-		if vec.len() < index {
+		dbg!(index);
+		dbg!(&vec);
+		dbg!(vec.len());
+		if vec.len() >= index {
 			Ok((t, vec, index))
 		} else {
+			eprintln!("out of bounds");
 			Err(serr())
 		}
 	} else {
-		Err(perr())
+		eprintln!("Type error, somehow");
+		Err(terr())
 	}
 }
 
@@ -59,4 +68,66 @@ pub fn add_to_list(list: Variable, index: Variable, item: Variable) -> Result<Va
 	}
 	vec.insert(index, item);
 	Ok(List(t, vec))
+}
+
+pub fn list_len(list: &Variable) -> Result<usize, CustomErr> {
+	if let List(_, l) = list {
+		Ok(l.len())
+	} else {
+		Err(terr())
+	}
+}
+
+pub fn join_lists(lhs: Variable, rhs: Variable) -> Result<Variable, CustomErr> {
+	if let (List(typ1, mut list), List(typ2, mut other_list)) = (lhs, rhs) {
+		if typ1 != typ2 {
+			return Err(terr());
+		}
+		list.append(&mut other_list);
+		Ok(List(typ1, list))
+	} else {
+		Err(terr())
+	}
+}
+
+pub fn get_item(list: Variable, index: Variable) -> Result<Variable, CustomErr> {
+	eprintln!("in get: {} {}", list, index);
+	let (_, mut vec, index) = parse_list_and_index(list, index)?;
+	eprintln!("past parse: {:?} {}", &vec, &index);
+	Ok(vec.remove(index))
+}
+
+pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	if words.is_empty() {
+		return Err(serr());
+	}
+	let list = if words.get(0).map(|s| !helper::is_list(s)) == Some(true) {
+		variable::evaluate_statement(&words[..1], variables)?
+	} else {
+		evaluate_list(&words[..1], variables)?
+	};
+	if !variable::to_type(&list).is_list_t() {
+		return Err(terr());
+	}
+
+	let len = Number(list_len(&list)? as f64);
+	let val = match (words.get(1), words.len()) {
+		(None, 1) => list,
+		(Some(&"len"), 2) => len,
+		(Some(&"+"), 3) => add_to_list(
+			list,
+			len,
+			variable::evaluate_statement(&words[2..3], variables)?,
+		)?,
+		(Some(&"+"), 4) => add_to_list(
+			list,
+			variable::evaluate_statement(&words[2..3], variables)?,
+			variable::evaluate_statement(&words[3..4], variables)?,
+		)?,
+		(Some(&"-"), 3) => remove_from_list(list, variable::evaluate_statement(&words[2..3], variables)?)?,
+		(Some(&"++"), 3) => join_lists(list, variable::evaluate_statement(&words[2..3], variables)?)?,
+		(Some(&"@"), 3) => get_item(list, variable::evaluate_statement(&words[2..3], variables)?)?,
+		_ => return Err(perr()),
+	};
+	Ok(val)
 }

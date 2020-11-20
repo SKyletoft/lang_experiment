@@ -56,14 +56,19 @@ fn get_right<'a>(
 }
 
 fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
-	if s.as_bytes()[0] == b'(' {
-		Ok(evaluate_bools(&helper::split(helper::remove_parens(s)), variables)?)
-	} else if let Ok(n) = evaluate_bool(s) {
-		Ok(n)
+	let val = if s.as_bytes()[0] == b'(' {
+		variable::evaluate_statement(&helper::split(helper::remove_parens(s))?, variables)?
 	} else if let Some(n) = variables.get(s) {
-		Ok(n.clone())
+		n.clone()
+	} else if let Ok(n) = evaluate_bool(s) {
+		n
 	} else {
-		Err(perr())
+		return Err(perr());
+	};
+	if variable::to_type(&val) == NumberT {
+		Ok(val)
+	} else {
+		Err(terr())
 	}
 }
 

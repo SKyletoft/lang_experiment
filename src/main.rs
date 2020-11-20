@@ -13,8 +13,8 @@ use variable::{
 	CallStack, Functions, Labels, Variable, Variable::*, VariableT, VariableT::*, Variables,
 };
 
-const KEYWORDS: [&'static str; 11] = [
-	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn",
+const KEYWORDS: [&str; 13] = [
+	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn", "last", "len"
 ];
 
 fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
@@ -55,7 +55,7 @@ fn if_statement(
 		}
 		Ok(Boolean(b))
 	} else {
-		Err(serr())
+		Err(terr())
 	}
 }
 
@@ -130,7 +130,6 @@ fn create_function(
 	if !variable::is_ok(words[0]) {
 		return Err(serr());
 	}
-	let name = words[0].to_owned();
 	let args = {
 		let mut vec = Vec::with_capacity(words.len() / 2);
 		for (name, typ) in words
@@ -145,6 +144,7 @@ fn create_function(
 		}
 		vec
 	};
+	let name = words[0].to_owned();
 	functions.insert(name, (args, index));
 	*creating_function += 1;
 	Ok(Boolean(true))
@@ -174,16 +174,16 @@ fn function_call(
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
 	let (args_req, pointer) = functions.get(words[0]).ok_or_else(perr)?;
-	let args = helper::split(&words[1][1..words[1].len() - 1]);
+	let args = helper::split(&words[1][1..words[1].len() - 1])?;
 	let mut new_vars = HashMap::new();
 	new_vars.insert("last".to_string(), Boolean(false));
 	for ((name, typ), &arg) in args_req.iter().zip(args.iter()) {
-		let split = helper::split(arg);
+		let split = helper::split(arg)?;
 		let parsed = match typ {
 			NumberT => floats::evaluate_floats(&split, variables)?,
 			BooleanT => bools::evaluate_bools(&split, variables)?,
 			//CharT => floats::evaluate_floats(arg, variables)?,
-			//ListT(_)
+			ListT(_) => list::evaluate_list(words, variables)?,
 			_ => return Err(perr()),
 		};
 		new_vars.insert(name.to_string(), parsed);
@@ -234,7 +234,14 @@ fn main() -> Result<(), CustomErr> {
 	loop {
 		let index = code.index + 1;
 		let (input_line, interactive) = code.next()?;
-		let words = helper::split(input_line.trim());
+		let words = {
+			let words = helper::split(input_line.trim());
+			if words.is_err() {
+				println!("{:?}", words);
+				continue;
+			}
+			words.unwrap()
+		};
 
 		if words.is_empty() {
 			continue;

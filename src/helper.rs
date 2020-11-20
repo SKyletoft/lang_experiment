@@ -1,4 +1,6 @@
-pub fn split(s: &'_ str) -> Vec<&'_ str> {
+use crate::*;
+
+pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 	let mut vec = Vec::new();
 	let mut parentheses = 0;
 	let mut brackets = 0;
@@ -40,7 +42,7 @@ pub fn split(s: &'_ str) -> Vec<&'_ str> {
 			(0, 0, 0, ')') => {
 				parentheses -= 1;
 			}
-			
+
 			(0, 0, 0, '"') if !escape => {
 				vec.push(&s[start..i]);
 				start = i;
@@ -67,7 +69,11 @@ pub fn split(s: &'_ str) -> Vec<&'_ str> {
 	}
 	vec.push(&s[start..]);
 	vec.retain(|slice| slice.chars().any(|c| !c.is_whitespace()));
-	vec
+	if parentheses == 0 && brackets == 0 && quotes == 0 {
+		Ok(vec)
+	} else {
+		Err(perr())
+	}
 }
 
 pub fn remove_parens(s: &'_ str) -> &'_ str {
@@ -81,4 +87,8 @@ pub fn remove_parens(s: &'_ str) -> &'_ str {
 	} else {
 		s
 	}
+}
+
+pub fn is_list (s: &str) -> bool {
+	s != remove_parens(s)
 }

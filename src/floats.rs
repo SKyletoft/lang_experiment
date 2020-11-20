@@ -12,21 +12,19 @@ enum Op<'a> {
 use Op::*;
 
 fn evaluate_float(num: &str) -> Result<Variable, CustomErr> {
-	if !num.chars().all(|x| ('0' <= x && x <= '9') || x == '.') {
+	if !num.chars().all(|x| x.is_ascii_digit() || x == '.') {
 		return Err(perr());
 	}
 	let mut splits = num.split('.');
-	let first = trusted_parse_int(splits.next().unwrap()) as f64;
-	let res = match num.chars().filter(|&x| x == '.').count() {
-		0 => Number(first),
-		1 => {
-			let word = splits.next().unwrap();
-			let second = trusted_parse_int(word) as f64;
-			Number(first + second / 10f64.powi(word.len() as i32))
+	match (splits.next(), splits.next(), splits.next()) {
+		(Some(first), None, None) => Ok(Number(trusted_parse_int(first) as f64)),
+		(Some(first), Some(second), None) => {
+			let first = trusted_parse_int(first) as f64;
+			let second = (trusted_parse_int(second) / second.len() as u64) as f64;
+			Ok(Number(first + second))
 		}
-		_ => return Err(perr()),
-	};
-	Ok(res)
+		_ => Err(perr()),
+	}
 }
 
 fn trusted_parse_int(string: &str) -> u64 {
@@ -56,14 +54,19 @@ fn get_left_and_right<'a>(
 }
 
 fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
-	if s.as_bytes()[0] == b'(' {
-		Ok(evaluate_floats(&helper::split(helper::remove_parens(s)), variables)?)
-	} else if let Ok(n) = evaluate_float(s) {
-		Ok(n)
+	let val = if s.as_bytes()[0] == b'(' {
+		variable::evaluate_statement(&helper::split(helper::remove_parens(s))?, variables)?
 	} else if let Some(n) = variables.get(s) {
-		Ok(n.clone())
+		n.clone()
+	} else if let Ok(n) = evaluate_float(s) {
+		n
 	} else {
-		Err(perr())
+		return Err(perr());
+	};
+	if variable::to_type(&val) == NumberT {
+		Ok(val)
+	} else {
+		Err(terr())
 	}
 }
 
@@ -91,7 +94,6 @@ pub fn evaluate_floats<'a>(
 	variables: &Variables,
 ) -> Result<Variable, CustomErr> {
 	let mut words: Vec<Op<'a>> = words.iter().map(|x| Unparsed(x)).collect();
-
 	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed("*")) {
 		let (left, right) = get_left_and_right(&mut idx, &mut words, variables)?;
 		words[idx] = Mul(Box::new(left), Box::new(right));
