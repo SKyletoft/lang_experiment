@@ -93,6 +93,9 @@ pub fn evaluate_floats<'a>(
 	words: &[&'a str],
 	variables: &Variables,
 ) -> Result<Variable, CustomErr> {
+
+	eprintln!("in float eval");
+
 	let mut words: Vec<Op<'a>> = words.iter().map(|x| Unparsed(x)).collect();
 	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed("*")) {
 		let (left, right) = get_left_and_right(&mut idx, &mut words, variables)?;

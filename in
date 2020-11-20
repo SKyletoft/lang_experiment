@@ -1,5 +1,4 @@
-let x = 5
-label a
-let x = x + 1
-print x
-jump a
+let x = [1 2 3 4 5 6 7 8 9 0]
+x @ 2
+(x @ 2) + 234 * 2
+exit

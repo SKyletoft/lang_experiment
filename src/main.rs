@@ -13,8 +13,8 @@ use variable::{
 	CallStack, Functions, Labels, Variable, Variable::*, VariableT, VariableT::*, Variables,
 };
 
-const KEYWORDS: [&str; 13] = [
-	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn", "last", "len"
+const KEYWORDS: [&str; 14] = [
+	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn", "last", "len", "exit"
 ];
 
 fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
@@ -266,6 +266,7 @@ fn main() -> Result<(), CustomErr> {
 
 		let rest = &words[1..];
 		let result = match words[0] {
+			"exit" => {return Ok(());}
 			"let" => create_variable(rest, &mut variables),
 			"if" => if_statement(rest, &variables, &mut skipping_if),
 			"print" => print(rest, &variables),

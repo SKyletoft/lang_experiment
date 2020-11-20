@@ -34,14 +34,8 @@ pub fn parse_list_and_index(
 	list: Variable,
 	index: Variable,
 ) -> Result<(VariableT, Vec<Variable>, usize), CustomErr> {
-	dbg!(&list);
-	dbg!(&index);
 	if let (List(t, vec), Number(i)) = (list, index) {
-		eprintln!("Types correct");
 		let index = i as usize;
-		dbg!(index);
-		dbg!(&vec);
-		dbg!(vec.len());
 		if vec.len() >= index {
 			Ok((t, vec, index))
 		} else {
@@ -49,7 +43,6 @@ pub fn parse_list_and_index(
 			Err(serr())
 		}
 	} else {
-		eprintln!("Type error, somehow");
 		Err(terr())
 	}
 }
@@ -91,9 +84,9 @@ pub fn join_lists(lhs: Variable, rhs: Variable) -> Result<Variable, CustomErr> {
 }
 
 pub fn get_item(list: Variable, index: Variable) -> Result<Variable, CustomErr> {
-	eprintln!("in get: {} {}", list, index);
+	//eprintln!("in get: {} {}", list, index);
 	let (_, mut vec, index) = parse_list_and_index(list, index)?;
-	eprintln!("past parse: {:?} {}", &vec, &index);
+	//eprintln!("past parse: {:?} {}", &vec, &index);
 	Ok(vec.remove(index))
 }
 
@@ -101,9 +94,12 @@ pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 	if words.is_empty() {
 		return Err(serr());
 	}
+	dbg!(words);
 	let list = if words.get(0).map(|s| !helper::is_list(s)) == Some(true) {
+		eprintln!("not list => variable eval");
 		variable::evaluate_statement(&words[..1], variables)?
 	} else {
+		eprintln!("list => list eval");
 		evaluate_list(&words[..1], variables)?
 	};
 	if !variable::to_type(&list).is_list_t() {

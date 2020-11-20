@@ -107,13 +107,11 @@ pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Varia
 	if b.is_ok() {
 		return b;
 	}
-
-	if words.get(0).map(|s| helper::is_list(s)) == Some(true) {
-		let list_op = list::list_op(words, variables);
-		if list_op.is_ok() {
-			return list_op;
-		}
+	let list_op = list::list_op(words, variables);
+	if list_op.is_ok() {
+		return list_op;
 	}
+	
 	Err(perr())
 }
 
