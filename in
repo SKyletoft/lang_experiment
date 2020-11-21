@@ -3,25 +3,25 @@ let x = 1
 print x
 
 if true
-	x = 6
+	let x = 6
 endif
 
 print x
 
 if false
-	x = 7
+	let x = 7
 endif
 
 print x
 
 if ([true false true] @ 2)
-	x = 2
+	let x = 2
 endif
 
 print x
 
 if ([false true false] @ 2)
-	x = 3
+	let x = 3
 endif
 
 print x

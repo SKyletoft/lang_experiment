@@ -71,7 +71,8 @@ fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	Ok(Boolean(true))
 }
 
-fn print_type(var: Variable) -> Result<Variable, CustomErr> {
+fn print_type(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	let var = variable::evaluate_statement(words, variables)?;
 	println!("> {}", variable::to_type(&var));
 	Ok(var)
 }
@@ -243,9 +244,8 @@ fn main() -> Result<(), CustomErr> {
 			}
 			continue;
 		}
-		if skipping_if > 0 {
+		if skipping_if >= 1 {
 			match words[0].trim() {
-				"endif" if skipping_if == 1 => skipping_if = 0,
 				"endif" => skipping_if -= 1,
 				"if" => skipping_if += 1,
 				_ => {}
@@ -260,12 +260,13 @@ fn main() -> Result<(), CustomErr> {
 			}
 			"let" => create_variable(rest, &mut variables),
 			"if" => if_statement(rest, &variables, &mut skipping_if),
+			"endif" => Ok(Boolean(true)),
 			"print" => print(rest, &variables),
 			"clear" => clear(),
 			"label" => create_labels(rest, &mut labels, index),
 			"jump" => jump(rest, &labels, &mut jump_next),
 			"jump_rel" => jump_rel(rest, &variables, index, &mut jump_next),
-			"type" => print_type(variable::evaluate_statement(rest, &variables)?),
+			"type" => print_type(rest, &variables),
 			"end" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
 			"return" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
 			"fn" => create_function(rest, &mut functions, index, &mut creating_function),

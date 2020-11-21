@@ -2,7 +2,7 @@ fn primes max num
 	let primes = [2 3 5 7 11 13]
 	let candidate = 13
 	label end
-	if (primes @ ((primes len) - 1)) == max
+	if (primes @ ((primes len) - 1)) === max
 		primes
 		return
 	endif
@@ -11,10 +11,10 @@ fn primes max num
 		let index = 0
 		let length = primes len
 		label prime_test
-			if (candidate % (primes @ index)) == 0
+			if (candidate % (primes @ index)) === 0
 				jump loop_start
 			endif
-			if index == length
+			if index === length
 				jump loop_start
 			endif
 		let primes = primes + candidate
