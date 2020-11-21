@@ -21,7 +21,7 @@ fn evaluate_float(num: &str) -> Result<Variable, CustomErr> {
 		(Some(first), None, None) => Ok(Number(trusted_parse_int(first) as f64)),
 		(Some(first), Some(second), None) => {
 			let first = trusted_parse_int(first) as f64;
-			let second = (trusted_parse_int(second) / second.len() as u64) as f64;
+			let second = trusted_parse_int(second) as f64 / 10u64.pow(second.len() as u32) as f64;
 			Ok(Number(first + second))
 		}
 		_ => Err(perr(line!(), file!())),

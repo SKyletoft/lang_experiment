@@ -38,9 +38,20 @@ pub fn char_op<'a>(words: &[&'a str], variables: &Variables) -> Result<Variable,
 				Err(terr(line!(), file!()))
 			}
 		}
+		["dig", statement] => {
+			if let Number(c) = floats::parse_or_get(statement, variables)? {
+				if c < 0. || 9. < c {
+					Err(serr(line!(), file!()))
+				} else {
+					Ok(Char((c as u8 + b'0') as char))
+				}
+			} else {
+				Err(terr(line!(), file!()))
+			}
+		}
 		["num", statement] => {
 			if let Number(c) = floats::parse_or_get(statement, variables)? {
-				Ok(Char((c as u8 + b'0') as char))
+				Ok(List(CharT, format!("{}", c).chars().map(Char).collect()))
 			} else {
 				Err(terr(line!(), file!()))
 			}

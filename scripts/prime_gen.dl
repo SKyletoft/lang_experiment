@@ -1,27 +1,29 @@
-fn prime_gen max num
-	let primes = [2 3 5 7 11 13]
-	let candidate = 13
-	label loop_start
-		let length = primes len
-		let candidate = candidate + 2
-		let index = 0
-		if length === max
-			primes
-			return
-		endif
-		label prime_test
-			if index === length
-				let primes = primes + candidate
-				jump loop_start
-			endif
-			if (candidate % (primes @ index)) === 0
-				jump loop_start
-			endif
-			let index = index + 1
-		jump prime_test
-end
+fn prime_gen max num;
+	let primes = [2 3 5 7 11 13];
+	let candidate = 13;
+	label loop_start;
+		let length = primes len;
+		let candidate = candidate + 2;
+		let index = 0;
+		if length == max;
+			primes;
+			return;
+		endif;
+		label prime_test;
+			if index == length;
+				let primes = primes + candidate;
+				jump loop_start;
+			endif;
+			if (candidate % (primes @ index)) == 0;
+				jump loop_start;
+			endif;
+			let index = index + 1;
+		jump prime_test;
+end;
 
-prime_gen (2000)
-print last
+let count = 2000;
+puts ("The first " ++ (num count)) ++ " primes";
+prime_gen(count);
+print last;
 
-exit
+exit;

@@ -6,8 +6,10 @@ pub struct Code {
 }
 
 impl Code {
-	pub fn from_file(_files: &[&str]) -> Code {
-		unimplemented!()
+	pub fn from_file(file: &str) -> Result<Code, CustomErr> {
+		let mut code = Code::new();
+		code.import(file)?;
+		Ok(code)
 	}
 
 	pub fn new() -> Self {
@@ -15,6 +17,23 @@ impl Code {
 			code: vec![String::new()],
 			index: 0,
 		}
+	}
+
+	pub fn import(&mut self, file: &str) -> Result<(), CustomErr> {
+		let mut file_content = fs::read_to_string(file)?.into_bytes();
+		eprintln!("could read");
+		for byte in file_content.iter_mut() {
+			*byte = match *byte {
+				b'\n' => b' ',
+				b';' => b'\n',
+				c => c,
+			}
+		}
+		let file_content = String::from_utf8(file_content)?;
+		for line in file_content.lines() {
+			self.code.push(line.to_owned());
+		}
+		Ok(())
 	}
 
 	pub fn next_line(&'_ mut self) -> Result<(&'_ str, bool), CustomErr> {

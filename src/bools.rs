@@ -130,7 +130,7 @@ pub fn evaluate_bools<'a>(words: &[&'a str], variables: &Variables) -> Result<Va
 		let (left, right) = get_left_and_right(&mut idx, &mut words, variables)?;
 		words[idx] = Eq(Box::new(left), Box::new(right));
 	}
-	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed("=")) {
+	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed("==")) {
 		words[idx] = float_eq(&mut idx, &mut words, variables)?;
 	}
 	while let Some(idx) = words.iter().position(|x| *x == Unparsed("!")) {
