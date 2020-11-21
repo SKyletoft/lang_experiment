@@ -139,26 +139,22 @@ pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 	}
 
 	let len = Number(list_len(&list)? as f64);
-	let val = match (words.get(1), words.len()) {
-		(None, 1) => list,
-		(Some(&"len"), 2) => len,
-		(Some(&"+"), 3) => add_to_list(
-			list,
-			len,
-			variable::evaluate_statement(&words[2..3], variables)?,
-		)?,
-		(Some(&"+"), 4) => add_to_list(
-			list,
-			variable::evaluate_statement(&words[2..3], variables)?,
-			variable::evaluate_statement(&words[3..4], variables)?,
-		)?,
-		(Some(&"-"), 3) => {
-			remove_from_list(list, variable::evaluate_statement(&words[2..3], variables)?)?
+	let val = match words {
+		[] => list,
+		[_, "len"] => len,
+		[_, "+", item] => {
+			add_to_list(list, len, variable::evaluate_statement(&[item], variables)?)?
 		}
-		(Some(&"++"), 3) => {
-			join_lists(list, variable::evaluate_statement(&words[2..3], variables)?)?
+		[_, "+", index, item] => add_to_list(
+			list,
+			variable::evaluate_statement(&[index], variables)?,
+			variable::evaluate_statement(&[item], variables)?,
+		)?,
+		[_, "-", index] => {
+			remove_from_list(list, variable::evaluate_statement(&[index], variables)?)?
 		}
-		(Some(&"@"), 3) => get_item(list, variable::evaluate_statement(&words[2..3], variables)?)?,
+		[_, "++", rhs] => join_lists(list, variable::evaluate_statement(&[rhs], variables)?)?,
+		[_, "@", index] => get_item(list, variable::evaluate_statement(&[index], variables)?)?,
 		_ => return Err(perr(line!(), file!())),
 	};
 	Ok(val)

@@ -16,9 +16,11 @@ use variable::{
 	CallStack, Functions, Labels, Variable, Variable::*, VariableT, VariableT::*, Variables,
 };
 
-const KEYWORDS: [&str; 15] = [
+const KEYWORDS: [&str; 46] = [
 	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn",
-	"last", "len", "exit", "return",
+	"last", "len", "exit", "return", "n", "dig", "num", "c", "bool", "list", "char", "f64", "+",
+	"-", "*", "/", "%", "@", "++", "^", "!", "=", "==", "<", "<=", ">", ">=", "\"", "'", "(", ")",
+	"[", "]", "{", "}",
 ];
 
 fn main() {
