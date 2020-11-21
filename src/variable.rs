@@ -44,13 +44,21 @@ pub enum VariableT {
 impl std::str::FromStr for VariableT {
 	type Err = CustomErr;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
-		let res = match s.trim() {
-			"f64" => NumberT,
-			"num" => NumberT,
-			"bool" => BooleanT,
-			"char" => CharT,
-			//"list" => ListT()
-			_ => return Err(serr(line!(), file!())),
+		let res = if helper::has_parentheses(s) {
+			let split = helper::split(helper::remove_parens(s))?;
+			match split.as_slice() {
+				["list", typ] => ListT(Box::new(typ.parse()?)),
+				[_, _] => return Err(terr(line!(), file!())),
+				_ => return Err(serr(line!(), file!())),
+			}
+		} else {
+			match s {
+				"f64" => NumberT,
+				"num" => NumberT,
+				"bool" => BooleanT,
+				"char" => CharT,
+				_ => return Err(serr(line!(), file!())),
+			}
 		};
 		Ok(res)
 	}

@@ -21,7 +21,7 @@ fn prime_gen max num
 		jump prime_test
 end
 
-prime_gen (10000)
+prime_gen (2000)
 print last
 
 exit

@@ -15,7 +15,7 @@ use variable::{
 
 const KEYWORDS: [&str; 15] = [
 	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn",
-	"last", "len", "exit", "return"
+	"last", "len", "exit", "return",
 ];
 
 fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
@@ -26,15 +26,24 @@ fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable
 		return Err(serr(line!(), file!()));
 	}
 	let new = if words.len() == 1 {
-		variables.get("last").ok_or_else(|| serr(line!(), file!()))?.clone()
+		variables
+			.get("last")
+			.ok_or_else(|| serr(line!(), file!()))?
+			.clone()
 	} else if words.get(1) == Some(&"=") {
 		variable::evaluate_statement(&words[2..], variables)?
 	} else if words.get(2) == Some(&"=") {
 		match words[1].parse::<VariableT>()? {
-			NumberT => floats::evaluate_floats(&words[3..], &variables)?,
-			BooleanT => bools::evaluate_bools(&words[3..], &variables)?,
-			ListT(_) => unimplemented!(),
+			NumberT => floats::evaluate_floats(&words[3..], variables)?,
+			BooleanT => bools::evaluate_bools(&words[3..], variables)?,
 			CharT => unimplemented!(),
+			ListT(typ) => {
+				let parsed = list::list_op(&words[3..], variables)?;
+				if variable::to_type(&parsed) != *typ {
+					return Err(terr(line!(), file!()));
+				}
+				parsed
+			}
 		}
 	} else {
 		return Err(perr(line!(), file!()));
@@ -159,7 +168,9 @@ fn exit_function(
 	if call_stack.is_empty() {
 		return Err(serr(line!(), file!()));
 	}
-	let return_value = variables.remove("last").ok_or_else(|| serr(line!(), file!()))?;
+	let return_value = variables
+		.remove("last")
+		.ok_or_else(|| serr(line!(), file!()))?;
 	let (revert_stack, return_adr) = call_stack.remove(call_stack.len() - 1);
 	*jump_next = Some(return_adr);
 	*variables = revert_stack;
@@ -174,7 +185,9 @@ fn function_call(
 	index: usize,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
-	let (args_req, pointer) = functions.get(words[0]).ok_or_else(|| perr(line!(), file!()))?;
+	let (args_req, pointer) = functions
+		.get(words[0])
+		.ok_or_else(|| perr(line!(), file!()))?;
 	let args = helper::split(&words[1][1..words[1].len() - 1])?;
 	let mut new_vars = HashMap::new();
 	new_vars.insert("last".to_string(), Boolean(false));
@@ -212,6 +225,7 @@ fn solve_function_or_variable(
 }
 
 fn main() -> Result<(), CustomErr> {
+	eprint!("Source at:\thttps://github.com/SKyletoft/lang_experiment\nCompiled at:\t{}", include_str!("../target/date.txt"));
 	let mut variables: Variables = HashMap::new();
 	let mut labels: Labels = HashMap::new();
 	let mut functions: Functions = HashMap::new();
@@ -283,10 +297,14 @@ fn main() -> Result<(), CustomErr> {
 			if interactive && creating_function == 0 && call_stack.is_empty() {
 				println!("> {}", &last);
 			}
-			*variables.get_mut("last").ok_or_else(|| serr(line!(), file!()))? = last;
+			*variables
+				.get_mut("last")
+				.ok_or_else(|| serr(line!(), file!()))? = last;
 		} else {
 			eprintln!("{:3}: {:?}", index, result);
-			*variables.get_mut("last").ok_or_else(|| serr(line!(), file!()))? = Boolean(false);
+			*variables
+				.get_mut("last")
+				.ok_or_else(|| serr(line!(), file!()))? = Boolean(false);
 		}
 		if let Some(target) = jump_next {
 			code.index = target;
