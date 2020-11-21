@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::{io, io::Write};
 
 pub mod bools;
+pub mod chars;
 pub mod errors;
 pub mod file;
 pub mod floats;
@@ -78,6 +79,20 @@ fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	}
 	writeln!(lock)?;
 	Ok(Boolean(true))
+}
+
+fn print_string(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	if let List(CharT, vec) = variable::evaluate_statement(words, variables)? {
+		let stdout = io::stdout();
+		let mut lock = stdout.lock();
+		for letter in vec.iter() {
+			write!(lock, "{}", letter)?;
+		}
+		writeln!(lock)?;
+		Ok(Boolean(true))
+	} else {
+		Err(terr(line!(), file!()))
+	}
 }
 
 fn print_type(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
@@ -185,20 +200,25 @@ fn function_call(
 	index: usize,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
+	if words.len() != 2 {
+		return Err(perr(line!(), file!()));
+	}
+	if helper::has_parentheses(words[1]) {
+		return Err(perr(line!(), file!()));
+	}
 	let (args_req, pointer) = functions
 		.get(words[0])
 		.ok_or_else(|| perr(line!(), file!()))?;
-	let args = helper::split(&words[1][1..words[1].len() - 1])?;
+	let args = helper::split(helper::remove_parens(words[1]))?;
 	let mut new_vars = HashMap::new();
 	new_vars.insert("last".to_string(), Boolean(false));
 	for ((name, typ), &arg) in args_req.iter().zip(args.iter()) {
-		let split = helper::split(arg)?;
+		let split = helper::split(helper::remove_parens(arg))?;
 		let parsed = match typ {
 			NumberT => floats::evaluate_floats(&split, variables)?,
 			BooleanT => bools::evaluate_bools(&split, variables)?,
-			//CharT => floats::evaluate_floats(arg, variables)?,
+			CharT => chars::char_op(&split, variables)?,
 			ListT(_) => list::evaluate_list(words, variables)?,
-			_ => return Err(perr(line!(), file!())),
 		};
 		new_vars.insert(name.to_string(), parsed);
 	}
@@ -225,7 +245,10 @@ fn solve_function_or_variable(
 }
 
 fn main() -> Result<(), CustomErr> {
-	eprint!("Source at:\thttps://github.com/SKyletoft/lang_experiment\nCompiled at:\t{}", include_str!("../target/date.txt"));
+	eprint!(
+		"Source at:\thttps://github.com/SKyletoft/lang_experiment\nCompiled at:\t{}",
+		include_str!("../target/date.txt")
+	);
 	let mut variables: Variables = HashMap::new();
 	let mut labels: Labels = HashMap::new();
 	let mut functions: Functions = HashMap::new();
@@ -284,6 +307,7 @@ fn main() -> Result<(), CustomErr> {
 			"end" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
 			"return" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
 			"fn" => create_function(rest, &mut functions, index, &mut creating_function),
+			"puts" => print_string(rest, &variables),
 			_ => solve_function_or_variable(
 				&words,
 				&mut variables,

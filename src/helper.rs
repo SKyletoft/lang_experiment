@@ -77,8 +77,8 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 }
 
 pub fn remove_parens(s: &'_ str) -> &'_ str {
-	let l = s.len();
-	if is_list(s) || has_parentheses(s) {
+	if is_list(s) || has_parentheses(s) || is_string(s) {
+		let l = s.len();
 		&s[1..l - 1]
 	} else {
 		s
@@ -88,11 +88,20 @@ pub fn remove_parens(s: &'_ str) -> &'_ str {
 pub fn is_list(s: &str) -> bool {
 	let b = s.as_bytes();
 	let l = s.len();
-	b.get(0) == Some(&b'[') && b.get(l - 1) == Some(&b']')
+	let last = l.wrapping_sub(1);
+	b.get(0) == Some(&b'[') && b.get(last) == Some(&b']')
 }
 
 pub fn has_parentheses(s: &str) -> bool {
 	let b = s.as_bytes();
 	let l = s.len();
-	b.get(0) == Some(&b'(') && b.get(l - 1) == Some(&b')')
+	let last = l.wrapping_sub(1);
+	b.get(0) == Some(&b'(') && b.get(last) == Some(&b')')
+}
+
+pub fn is_string(s: &str) -> bool {
+	let b = s.as_bytes();
+	let l = s.len();
+	let last = l.wrapping_sub(1);
+	b.get(0) == Some(&b'"') && b.get(last) == Some(&b'"')
 }

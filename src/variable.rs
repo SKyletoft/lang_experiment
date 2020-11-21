@@ -115,6 +115,10 @@ pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Varia
 	if b.is_ok() {
 		return b;
 	}
+	let c = chars::char_op(words, variables);
+	if c.is_ok() {
+		return c;
+	}
 	let l = list::list_op(words, variables);
 	if l.is_ok() {
 		return l;

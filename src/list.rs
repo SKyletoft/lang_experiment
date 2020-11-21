@@ -1,11 +1,26 @@
 use crate::*;
 
+pub fn evaluate_list_or_string(
+	words: &[&str],
+	variables: &Variables,
+) -> Result<Variable, CustomErr> {
+	let list = evaluate_list(words, variables);
+	if list.is_ok() {
+		return list;
+	}
+	let string = evaluate_string(words);
+	if string.is_ok() {
+		return string;
+	}
+	Err(perr(line!(), file!()))
+}
+
 pub fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	if words.len() != 1 {
 		return Err(perr(line!(), file!()));
 	}
 	let word = words[0];
-	if word.as_bytes()[0] != b'[' || word.as_bytes()[word.len() - 1] != b']' {
+	if helper::is_list(word) {
 		return Err(perr(line!(), file!()));
 	}
 
@@ -28,6 +43,21 @@ pub fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, 
 		vec.push(parsed);
 	}
 	Ok(List(typ, vec))
+}
+
+pub fn evaluate_string(words: &[&str]) -> Result<Variable, CustomErr> {
+	if words.len() != 1 {
+		return Err(perr(line!(), file!()));
+	}
+	let word = words[0];
+	if helper::is_string(word) {
+		Ok(List(
+			CharT,
+			helper::remove_parens(word).chars().map(Char).collect(),
+		))
+	} else {
+		Err(perr(line!(), file!()))
+	}
 }
 
 pub fn parse_list_and_index(
@@ -92,13 +122,17 @@ pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 	if words.is_empty() {
 		return Err(serr(line!(), file!()));
 	}
-	let list = if words.get(0).map(|s| !helper::is_list(s)) == Some(true) {
+	let list = if words
+		.get(0)
+		.map(|s| !helper::is_list(s) && !helper::is_string(s))
+		== Some(true)
+	{
 		if words.len() == 1 {
 			return Err(perr(line!(), file!()));
 		}
 		variable::evaluate_statement(&words[..1], variables)?
 	} else {
-		evaluate_list(&words[..1], variables)?
+		evaluate_list_or_string(&words[..1], variables)?
 	};
 	if !variable::to_type(&list).is_list_t() {
 		return Err(terr(line!(), file!()));
