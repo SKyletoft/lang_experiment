@@ -11,23 +11,24 @@ pub mod list;
 pub mod logic;
 pub mod variable;
 use errors::*;
+use file::Code;
 use variable::{
 	CallStack, Functions, Labels, Variable, Variable::*, VariableT, VariableT::*, Variables,
 };
-use file::Code;
 
 const KEYWORDS: [&str; 15] = [
 	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn",
 	"last", "len", "exit", "return",
 ];
 
-fn main () {
+fn main() {
 	let mut code = Code::new();
 	for file in env::args().skip(1) {
-		code.import(&file).unwrap_or_else(|_| panic!("Couldn't read file: {}", &file));
+		code.import(&file)
+			.unwrap_or_else(|_| panic!("Couldn't read file: {}", &file));
 	}
 	match logic::run(code) {
-		Ok(_) => {},
-		Err(e) => eprintln!("{}", e)
+		Ok(_) => {}
+		Err(e) => eprintln!("{}", e),
 	}
 }
