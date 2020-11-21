@@ -42,7 +42,7 @@ pub enum VariableT {
 }
 
 impl std::str::FromStr for VariableT {
-	type Err = SyntaxError;
+	type Err = CustomErr;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		let res = match s.trim() {
 			"f64" => NumberT,
@@ -50,7 +50,7 @@ impl std::str::FromStr for VariableT {
 			"bool" => BooleanT,
 			"char" => CharT,
 			//"list" => ListT()
-			_ => return Err(SyntaxError {}),
+			_ => return Err(serr(line!(), file!())),
 		};
 		Ok(res)
 	}
@@ -77,10 +77,7 @@ impl fmt::Display for VariableT {
 
 impl VariableT {
 	pub fn is_list_t(&self) -> bool {
-		match self {
-			ListT(_) => true,
-			_ => false,
-		}
+		matches!(self, &ListT(_))
 	}
 }
 
@@ -102,20 +99,20 @@ pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Varia
 			return Ok(n.clone());
 		}
 	}
-	let float = floats::evaluate_floats(words, variables);
-	if float.is_ok() {
-		return float;
+	let f = floats::evaluate_floats(words, variables);
+	if f.is_ok() {
+		return f;
 	}
 	let b = bools::evaluate_bools(words, variables);
 	if b.is_ok() {
 		return b;
 	}
-	let list_op = list::list_op(words, variables);
-	if list_op.is_ok() {
-		return list_op;
+	let l = list::list_op(words, variables);
+	if l.is_ok() {
+		return l;
 	}
 
-	Err(perr())
+	Err(perr(line!(), file!()))
 }
 
 pub fn is_ok(name: &str) -> bool {

@@ -17,7 +17,7 @@ impl Code {
 		}
 	}
 
-	pub fn next(&'_ mut self) -> Result<(&'_ str, bool), CustomErr> {
+	pub fn next_line(&'_ mut self) -> Result<(&'_ str, bool), CustomErr> {
 		self.index += 1;
 		let mut interactive = false;
 		while self.index >= self.code.len() {

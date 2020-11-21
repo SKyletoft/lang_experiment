@@ -1,0 +1,22 @@
+fn primes max num
+	let primes = [2 3 5 7 11 13]
+	let candidate = 13
+	label end
+	if (primes @ ((primes len) - 1)) == max
+		primes
+		return
+	endif
+	label loop_start
+		let candidate = candidate + 2
+		let index = 0
+		let length = primes len
+		label prime_test
+			if (candidate % (primes @ index)) == 0
+				jump loop_start
+			endif
+			if index == length
+				jump loop_start
+			endif
+		let primes = primes + candidate
+	jump loop_start
+end

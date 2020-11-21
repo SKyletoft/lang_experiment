@@ -13,20 +13,20 @@ use variable::{
 	CallStack, Functions, Labels, Variable, Variable::*, VariableT, VariableT::*, Variables,
 };
 
-const KEYWORDS: [&str; 14] = [
+const KEYWORDS: [&str; 15] = [
 	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn",
-	"last", "len", "exit",
+	"last", "len", "exit", "return"
 ];
 
 fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
 	if words.is_empty() || words.len() == 2 || words.get(0) == Some(&"last") {
-		return Err(perr());
+		return Err(perr(line!(), file!()));
 	}
 	if !variable::is_ok(words[0]) {
-		return Err(serr());
+		return Err(serr(line!(), file!()));
 	}
 	let new = if words.len() == 1 {
-		variables.get("last").ok_or_else(serr)?.clone()
+		variables.get("last").ok_or_else(|| serr(line!(), file!()))?.clone()
 	} else if words.get(1) == Some(&"=") {
 		variable::evaluate_statement(&words[2..], variables)?
 	} else if words.get(2) == Some(&"=") {
@@ -37,7 +37,7 @@ fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable
 			CharT => unimplemented!(),
 		}
 	} else {
-		return Err(perr());
+		return Err(perr(line!(), file!()));
 	};
 	let name = words[0].to_string();
 	variables.insert(name, new.clone());
@@ -49,14 +49,13 @@ fn if_statement(
 	variables: &Variables,
 	skipping_if: &mut isize,
 ) -> Result<Variable, CustomErr> {
-	dbg!(words);
-	if let Boolean(b) = bools::evaluate_bools(words, variables)? {
+	if let Boolean(b) = variable::evaluate_statement(words, variables)? {
 		if !b {
 			*skipping_if += 1;
 		}
 		Ok(Boolean(b))
 	} else {
-		Err(terr())
+		Err(terr(line!(), file!()))
 	}
 }
 
@@ -65,7 +64,7 @@ fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	let mut lock = stdout.lock();
 	write!(lock, "> ")?;
 	for &word in words {
-		let result = variables.get(word).ok_or_else(perr)?;
+		let result = variables.get(word).ok_or_else(|| perr(line!(), file!()))?;
 		write!(lock, "{} ", result)?;
 	}
 	writeln!(lock)?;
@@ -83,7 +82,7 @@ fn clear() -> Result<Variable, CustomErr> {
 
 fn create_labels(words: &[&str], labels: &mut Labels, index: usize) -> Result<Variable, CustomErr> {
 	if words.is_empty() {
-		return Err(perr());
+		return Err(perr(line!(), file!()));
 	}
 	labels.insert(words[0].to_string(), index);
 	Ok(Boolean(true))
@@ -95,9 +94,9 @@ fn jump(
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
 	if words.is_empty() {
-		return Err(perr());
+		return Err(perr(line!(), file!()));
 	}
-	let &target = labels.get(words[0]).ok_or_else(perr)?;
+	let &target = labels.get(words[0]).ok_or_else(|| perr(line!(), file!()))?;
 	*jump_next = Some(target);
 	Ok(Boolean(true))
 }
@@ -109,13 +108,13 @@ fn jump_rel(
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
 	if words.is_empty() {
-		return Err(perr());
+		return Err(perr(line!(), file!()));
 	}
 	if let Number(n) = floats::evaluate_floats(words, variables)? {
 		*jump_next = Some((index as isize).saturating_add(n as isize) as usize);
 		Ok(Number(n))
 	} else {
-		Err(serr())
+		Err(serr(line!(), file!()))
 	}
 }
 
@@ -126,10 +125,10 @@ fn create_function(
 	creating_function: &mut isize,
 ) -> Result<Variable, CustomErr> {
 	if words.len() % 2 == 0 {
-		return Err(serr());
+		return Err(serr(line!(), file!()));
 	}
 	if !variable::is_ok(words[0]) {
-		return Err(serr());
+		return Err(serr(line!(), file!()));
 	}
 	let args = {
 		let mut vec = Vec::with_capacity(words.len() / 2);
@@ -157,9 +156,9 @@ fn exit_function(
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
 	if call_stack.is_empty() {
-		return Err(serr());
+		return Err(serr(line!(), file!()));
 	}
-	let return_value = variables.remove("last").ok_or_else(serr)?;
+	let return_value = variables.remove("last").ok_or_else(|| serr(line!(), file!()))?;
 	let (revert_stack, return_adr) = call_stack.remove(call_stack.len() - 1);
 	*jump_next = Some(return_adr);
 	*variables = revert_stack;
@@ -174,7 +173,7 @@ fn function_call(
 	index: usize,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
-	let (args_req, pointer) = functions.get(words[0]).ok_or_else(perr)?;
+	let (args_req, pointer) = functions.get(words[0]).ok_or_else(|| perr(line!(), file!()))?;
 	let args = helper::split(&words[1][1..words[1].len() - 1])?;
 	let mut new_vars = HashMap::new();
 	new_vars.insert("last".to_string(), Boolean(false));
@@ -185,7 +184,7 @@ fn function_call(
 			BooleanT => bools::evaluate_bools(&split, variables)?,
 			//CharT => floats::evaluate_floats(arg, variables)?,
 			ListT(_) => list::evaluate_list(words, variables)?,
-			_ => return Err(perr()),
+			_ => return Err(perr(line!(), file!())),
 		};
 		new_vars.insert(name.to_string(), parsed);
 	}
@@ -225,7 +224,7 @@ fn main() -> Result<(), CustomErr> {
 
 	loop {
 		let index = code.index + 1;
-		let (input_line, interactive) = code.next()?;
+		let (input_line, interactive) = code.next_line()?;
 		let words = {
 			let words = helper::split(input_line.trim());
 			if words.is_err() {
@@ -244,16 +243,14 @@ fn main() -> Result<(), CustomErr> {
 			}
 			continue;
 		}
-		if skipping_if >= 0 {
+		if skipping_if > 0 {
 			match words[0].trim() {
-				"endif" if skipping_if == 1 => {
-					skipping_if = 0;
-					continue;
-				}
+				"endif" if skipping_if == 1 => skipping_if = 0,
 				"endif" => skipping_if -= 1,
 				"if" => skipping_if += 1,
 				_ => {}
 			}
+			continue;
 		}
 
 		let rest = &words[1..];
@@ -270,6 +267,7 @@ fn main() -> Result<(), CustomErr> {
 			"jump_rel" => jump_rel(rest, &variables, index, &mut jump_next),
 			"type" => print_type(variable::evaluate_statement(rest, &variables)?),
 			"end" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
+			"return" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
 			"fn" => create_function(rest, &mut functions, index, &mut creating_function),
 			_ => solve_function_or_variable(
 				&words,
@@ -284,10 +282,10 @@ fn main() -> Result<(), CustomErr> {
 			if interactive && creating_function == 0 && call_stack.is_empty() {
 				println!("> {}", &last);
 			}
-			*variables.get_mut("last").ok_or_else(serr)? = last;
+			*variables.get_mut("last").ok_or_else(|| serr(line!(), file!()))? = last;
 		} else {
 			println!("{:?}", result);
-			*variables.get_mut("last").ok_or_else(serr)? = Boolean(false);
+			*variables.get_mut("last").ok_or_else(|| serr(line!(), file!()))? = Boolean(false);
 		}
 		if let Some(target) = jump_next {
 			code.index = target;
