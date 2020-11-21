@@ -72,9 +72,6 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 	if parentheses == 0 && brackets == 0 && quotes == 0 {
 		Ok(vec)
 	} else {
-		dbg!(s);
-		dbg!(vec);
-		dbg!((brackets, parentheses, quotes));
 		Err(perr(line!(), file!()))
 	}
 }

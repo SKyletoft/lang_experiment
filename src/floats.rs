@@ -72,7 +72,6 @@ pub fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomEr
 }
 
 fn eval_op(op: Op<'_>, variables: &Variables) -> Result<f64, CustomErr> {
-	//dbg!(&op);
 	Ok(match op {
 		Add(l, r) => eval_op(*l, variables)? + eval_op(*r, variables)?,
 		Sub(l, r) => eval_op(*l, variables)? - eval_op(*r, variables)?,

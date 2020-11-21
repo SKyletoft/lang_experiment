@@ -23,7 +23,7 @@ impl fmt::Display for Variable {
 			Number(n) => write!(f, "{}", n),
 			Char(c) => write!(f, "{}", c),
 			List(t, l) => {
-				write!(f, "({})[ ", t)?;
+				write!(f, "({}, {})[ ", t, l.len())?;
 				for element in l.iter() {
 					write!(f, "{} ", element)?;
 				}

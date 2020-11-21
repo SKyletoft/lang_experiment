@@ -83,8 +83,7 @@ fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	} else if let Ok(n) = evaluate_bool(s) {
 		n
 	} else {
-		//Maybe just return error immediately since this should cause a type error anyway?
-		variable::evaluate_statement(&[s], variables)?
+		return Err(perr(line!(), file!()));
 	};
 	if variable::to_type(&val) == BooleanT {
 		Ok(val)
