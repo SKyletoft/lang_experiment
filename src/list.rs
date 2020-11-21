@@ -20,7 +20,7 @@ pub fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, 
 		return Err(perr(line!(), file!()));
 	}
 	let word = words[0];
-	if helper::is_list(word) {
+	if !helper::is_list(word) {
 		return Err(perr(line!(), file!()));
 	}
 

@@ -132,4 +132,6 @@ pub fn is_ok(name: &str) -> bool {
 		&& !name.is_empty()
 		&& name.as_bytes().get(0).map(|d| d.is_ascii_digit()) != Some(true)
 		&& !helper::is_list(name)
+		&& !helper::is_string(name)
+		&& !helper::has_parentheses(name)
 }
