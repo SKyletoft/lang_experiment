@@ -73,7 +73,7 @@ pub fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomEr
 	}
 }
 
-fn eval_op(op: Op<'_>, variables: &Variables) -> Result<f64, CustomErr> {
+fn eval_op(op: Op, variables: &Variables) -> Result<f64, CustomErr> {
 	Ok(match op {
 		Add(l, r) => eval_op(*l, variables)? + eval_op(*r, variables)?,
 		Sub(l, r) => eval_op(*l, variables)? - eval_op(*r, variables)?,
@@ -99,11 +99,11 @@ fn perform_all_of_operation<'a>(
 	Ok(())
 }
 
-fn order_of_operations_parse<'a>(
-	words: &[&'a str],
+fn order_of_operations_parse(
+	words: &[&str],
 	variables: &Variables,
 ) -> Result<Variable, CustomErr> {
-	let mut words: Vec<Op<'a>> = words.iter().map(|x| Unparsed(x)).collect();
+	let mut words: Vec<Op> = words.iter().map(|x| Unparsed(x)).collect();
 
 	let operator_fn_pair: [(&str, OpFnPtr); 5] = [
 		("*", |lhs, rhs| Mul(lhs, rhs)),
@@ -145,8 +145,8 @@ fn logic_parse(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 	Ok(Boolean(res))
 }
 
-pub fn evaluate_floats<'a>(
-	words: &[&'a str],
+pub fn evaluate_floats(
+	words: &[&str],
 	variables: &Variables,
 ) -> Result<Variable, CustomErr> {
 	let ooop = order_of_operations_parse(words, variables);

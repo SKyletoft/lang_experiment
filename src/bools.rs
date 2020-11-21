@@ -73,7 +73,7 @@ fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	}
 }
 
-fn eval_op(op: Op<'_>, variables: &Variables) -> Result<bool, CustomErr> {
+fn eval_op(op: Op, variables: &Variables) -> Result<bool, CustomErr> {
 	Ok(match op {
 		And(l, r) => eval_op(*l, variables)? && eval_op(*r, variables)?,
 		Or(l, r) => eval_op(*l, variables)? || eval_op(*r, variables)?,
@@ -99,8 +99,8 @@ fn perform_all_of_operation<'a>(
 	Ok(())
 }
 
-pub fn evaluate_bools<'a>(words: &[&'a str], variables: &Variables) -> Result<Variable, CustomErr> {
-	let mut words: Vec<Op<'a>> = words.iter().map(|x| Unparsed(x)).collect();
+pub fn evaluate_bools(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	let mut words: Vec<Op> = words.iter().map(|x| Unparsed(x)).collect();
 
 	let operator_fn_pair: [(&str, OpFnPtr); 4] = [
 		("&", |lhs, rhs| And(lhs, rhs)),

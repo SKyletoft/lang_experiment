@@ -29,7 +29,7 @@ pub fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomEr
 	}
 }
 
-pub fn char_op<'a>(words: &[&'a str], variables: &Variables) -> Result<Variable, CustomErr> {
+pub fn char_op(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	match words {
 		["n", statement] => {
 			let c = variable::un_char(&parse_or_get(statement, variables)?)?;
