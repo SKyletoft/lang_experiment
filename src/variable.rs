@@ -89,6 +89,35 @@ impl VariableT {
 	}
 }
 
+pub fn un_number(var: &Variable) -> Result<f64, CustomErr> {
+	if let Number(n) = var {
+		Ok(*n)
+	} else {
+		Err(terr(line!(), file!()))
+	}
+}
+pub fn un_bool(var: &Variable) -> Result<bool, CustomErr> {
+	if let Boolean(n) = var {
+		Ok(*n)
+	} else {
+		Err(terr(line!(), file!()))
+	}
+}
+pub fn un_char(var: &Variable) -> Result<char, CustomErr> {
+	if let Char(n) = var {
+		Ok(*n)
+	} else {
+		Err(terr(line!(), file!()))
+	}
+}
+pub fn un_list<'a>(var: &'a Variable) -> Result<(&'a VariableT, &'a Vec<Variable>), CustomErr> {
+	if let List(t, v) = var {
+		Ok((t, v))
+	} else {
+		Err(terr(line!(), file!()))
+	}
+}
+
 pub fn to_type(var: &Variable) -> VariableT {
 	match var {
 		Number(_) => NumberT,

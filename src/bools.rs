@@ -11,6 +11,7 @@ enum Op<'a> {
 	Unparsed(&'a str),
 }
 use Op::*;
+type OpFnPtr<'a> = fn(Box<Op<'a>>, Box<Op<'a>>) -> Op<'a>;
 
 fn evaluate_bool(b: &str) -> Result<Variable, CustomErr> {
 	match b {
@@ -38,26 +39,6 @@ fn get_left_and_right<'a>(
 		x => x,
 	};
 	Ok((left, right))
-}
-
-fn float_eq<'a>(
-	idx: &mut usize,
-	words: &mut Vec<Op<'a>>,
-	variables: &Variables,
-) -> Result<Op<'a>, CustomErr> {
-	if *idx == 0 {
-		return Err(perr(line!(), file!()));
-	}
-	let left = match words.remove(*idx - 1) {
-		Unparsed(s) => floats::parse_or_get(s, variables)?,
-		_ => return Err(terr(line!(), file!())),
-	};
-	*idx -= 1;
-	let right = match words.remove(*idx + 1) {
-		Unparsed(s) => floats::parse_or_get(s, variables)?,
-		_ => return Err(terr(line!(), file!())),
-	};
-	Ok(Val(Boolean(left == right)))
 }
 
 fn get_right<'a>(
@@ -100,38 +81,35 @@ fn eval_op(op: Op<'_>, variables: &Variables) -> Result<bool, CustomErr> {
 		Eq(l, r) => eval_op(*l, variables)? == eval_op(*r, variables)?,
 		Not(l) => !eval_op(*l, variables)?,
 		Val(Boolean(x)) => x,
-		Unparsed(s) => {
-			if let Boolean(n) = parse_or_get(s, variables)? {
-				n
-			} else {
-				return Err(terr(line!(), file!()));
-			}
-		}
+		Unparsed(s) => variable::un_bool(&parse_or_get(s, variables)?)?,
 		_ => return Err(perr(line!(), file!())),
 	})
+}
+
+fn perform_all_of_operation<'a>(
+	words: &mut Vec<Op<'a>>,
+	variables: &Variables,
+	operator: &str,
+	operation_function: OpFnPtr<'a>,
+) -> Result<(), CustomErr> {
+	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed(operator)) {
+		let (left, right) = get_left_and_right(&mut idx, words, variables)?;
+		words[idx] = operation_function(Box::new(left), Box::new(right));
+	}
+	Ok(())
 }
 
 pub fn evaluate_bools<'a>(words: &[&'a str], variables: &Variables) -> Result<Variable, CustomErr> {
 	let mut words: Vec<Op<'a>> = words.iter().map(|x| Unparsed(x)).collect();
 
-	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed("&")) {
-		let (left, right) = get_left_and_right(&mut idx, &mut words, variables)?;
-		words[idx] = And(Box::new(left), Box::new(right));
-	}
-	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed("|")) {
-		let (left, right) = get_left_and_right(&mut idx, &mut words, variables)?;
-		words[idx] = Or(Box::new(left), Box::new(right));
-	}
-	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed("^")) {
-		let (left, right) = get_left_and_right(&mut idx, &mut words, variables)?;
-		words[idx] = Xor(Box::new(left), Box::new(right));
-	}
-	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed("=")) {
-		let (left, right) = get_left_and_right(&mut idx, &mut words, variables)?;
-		words[idx] = Eq(Box::new(left), Box::new(right));
-	}
-	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed("==")) {
-		words[idx] = float_eq(&mut idx, &mut words, variables)?;
+	let operator_fn_pair: [(&str, OpFnPtr); 4] = [
+		("&", |lhs, rhs| And(lhs, rhs)),
+		("|", |lhs, rhs| Or(lhs, rhs)),
+		("^", |lhs, rhs| Xor(lhs, rhs)),
+		("==", |lhs, rhs| Eq(lhs, rhs)),
+	];
+	for (operator, node_type) in operator_fn_pair.iter() {
+		perform_all_of_operation(&mut words, variables, operator, *node_type)?;
 	}
 	while let Some(idx) = words.iter().position(|x| *x == Unparsed("!")) {
 		let right = get_right(&idx, &mut words, variables)?;

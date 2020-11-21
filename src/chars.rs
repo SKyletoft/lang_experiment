@@ -32,36 +32,37 @@ pub fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomEr
 pub fn char_op<'a>(words: &[&'a str], variables: &Variables) -> Result<Variable, CustomErr> {
 	match words {
 		["n", statement] => {
-			if let Char(c) = parse_or_get(statement, variables)? {
-				Ok(Number(c as u8 as f64))
-			} else {
-				Err(terr(line!(), file!()))
-			}
+			let c = variable::un_char(&parse_or_get(statement, variables)?)?;
+			Ok(Number(c as u8 as f64))
 		}
 		["dig", statement] => {
-			if let Number(c) = floats::parse_or_get(statement, variables)? {
-				if c < 0. || 9. < c {
-					Err(serr(line!(), file!()))
-				} else {
-					Ok(Char((c as u8 + b'0') as char))
-				}
+			let c = variable::un_number(&floats::parse_or_get(statement, variables)?)?;
+			if c < 0. || 9. < c {
+				Err(serr(line!(), file!()))
 			} else {
-				Err(terr(line!(), file!()))
+				Ok(Char((c as u8 + b'0') as char))
 			}
 		}
 		["num", statement] => {
-			if let Number(c) = floats::parse_or_get(statement, variables)? {
-				Ok(List(CharT, format!("{}", c).chars().map(Char).collect()))
-			} else {
-				Err(terr(line!(), file!()))
-			}
+			let c = variable::un_number(&floats::parse_or_get(statement, variables)?)?;
+			Ok(List(CharT, format!("{}", c).chars().map(Char).collect()))
 		}
 		["c", statement] => {
-			if let Number(n) = floats::parse_or_get(statement, variables)? {
-				Ok(Char(n as u8 as char))
-			} else {
-				Err(terr(line!(), file!()))
-			}
+			let n = variable::un_number(&floats::parse_or_get(statement, variables)?)?;
+			Ok(Char(n as u8 as char))
+		}
+		[lhs, op, rhs] => {
+			let l = variable::un_char(&parse_or_get(lhs, variables)?)?;
+			let r = variable::un_char(&parse_or_get(rhs, variables)?)?;
+			let res = match *op {
+				"==" => l == r,
+				"<" => l < r,
+				">" => l > r,
+				"<=" => l <= r,
+				">=" => l >= r,
+				_ => return Err(perr(line!(), file!())),
+			};
+			Ok(Boolean(res))
 		}
 		[statement] => parse_or_get(statement, variables),
 		_ => Err(perr(line!(), file!())),

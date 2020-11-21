@@ -21,7 +21,6 @@ impl Code {
 
 	pub fn import(&mut self, file: &str) -> Result<(), CustomErr> {
 		let mut file_content = fs::read_to_string(file)?.into_bytes();
-		eprintln!("could read");
 		for byte in file_content.iter_mut() {
 			*byte = match *byte {
 				b'\n' => b' ',
