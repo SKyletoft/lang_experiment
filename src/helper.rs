@@ -31,10 +31,10 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 				start = i;
 				parentheses += 1;
 			}
-			(0, 0, _, '(') => {
+			(0, _, 0, '(') => {
 				parentheses += 1;
 			}
-			(0, 0, 1, ')') => {
+			(0, 1, 0, ')') => {
 				vec.push(&s[start..=i]);
 				start = i + 1;
 				parentheses -= 1;
@@ -48,7 +48,7 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 				start = i;
 				quotes += 1;
 			}
-			(0, 1, 0, '"') if !escape => {
+			(0, 0, 1, '"') if !escape => {
 				vec.push(&s[start..=i]);
 				start = i + 1;
 				quotes -= 1;
@@ -59,7 +59,7 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 				start = i + 1;
 			}
 
-			(0, 1, 0, '\\') => {
+			(0, 0, 1, '\\') => {
 				escape = true;
 				continue;
 			}
@@ -77,18 +77,22 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 }
 
 pub fn remove_parens(s: &'_ str) -> &'_ str {
-	let b = s.as_bytes();
 	let l = s.len();
-	if l >= 1
-		&& ((b.get(0) == Some(&b'(') && b.get(l - 1) == Some(&b')'))
-			|| (b.get(0) == Some(&b'[') && b.get(l - 1) == Some(&b']')))
-	{
+	if is_list(s) || has_parentheses(s) {
 		&s[1..l - 1]
 	} else {
 		s
 	}
 }
 
-pub fn is_list (s: &str) -> bool {
-	s != remove_parens(s)
+pub fn is_list(s: &str) -> bool {
+	let b = s.as_bytes();
+	let l = s.len();
+	b.get(0) == Some(&b'[') && b.get(l - 1) == Some(&b']')
+}
+
+pub fn has_parentheses(s: &str) -> bool {
+	let b = s.as_bytes();
+	let l = s.len();
+	b.get(0) == Some(&b'(') && b.get(l - 1) == Some(&b')')
 }

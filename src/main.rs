@@ -14,7 +14,8 @@ use variable::{
 };
 
 const KEYWORDS: [&str; 14] = [
-	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn", "last", "len", "exit"
+	"let", "if", "endif", "print", "clear", "label", "jump", "jump_rel", "type", "end", "fn",
+	"last", "len", "exit",
 ];
 
 fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
@@ -202,20 +203,11 @@ fn solve_function_or_variable(
 	index: usize,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
-	if words.len() == 1 {
-		let res = variables.get(words[0]).ok_or_else(perr);
-		if res.is_ok() {
-			Ok(res?.clone())
-		} else {
-			variable::evaluate_statement(words, variables)
-		}
+	let call = function_call(words, variables, functions, call_stack, index, jump_next);
+	if call.is_ok() {
+		call
 	} else {
-		let call = function_call(words, variables, functions, call_stack, index, jump_next);
-		if call.is_ok() {
-			call
-		} else {
-			variable::evaluate_statement(words, variables)
-		}
+		variable::evaluate_statement(words, variables)
 	}
 }
 
@@ -266,7 +258,9 @@ fn main() -> Result<(), CustomErr> {
 
 		let rest = &words[1..];
 		let result = match words[0] {
-			"exit" => {return Ok(());}
+			"exit" => {
+				return Ok(());
+			}
 			"let" => create_variable(rest, &mut variables),
 			"if" => if_statement(rest, &variables, &mut skipping_if),
 			"print" => print(rest, &variables),
@@ -293,6 +287,7 @@ fn main() -> Result<(), CustomErr> {
 			*variables.get_mut("last").ok_or_else(serr)? = last;
 		} else {
 			println!("{:?}", result);
+			*variables.get_mut("last").ok_or_else(serr)? = Boolean(false);
 		}
 		if let Some(target) = jump_next {
 			code.index = target;

@@ -92,10 +92,7 @@ fn eval_op(op: Op<'_>, variables: &Variables) -> Result<bool, CustomErr> {
 	})
 }
 
-pub fn evaluate_bools<'a>(
-	words: &[&'a str],
-	variables: &Variables,
-) -> Result<Variable, CustomErr> {
+pub fn evaluate_bools<'a>(words: &[&'a str], variables: &Variables) -> Result<Variable, CustomErr> {
 	let mut words: Vec<Op<'a>> = words.iter().map(|x| Unparsed(x)).collect();
 
 	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed("&")) {

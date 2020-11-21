@@ -76,12 +76,12 @@ impl fmt::Display for VariableT {
 }
 
 impl VariableT {
-    pub fn is_list_t(&self) -> bool {
-        match self {
-            ListT(_) => true,
-            _ => false,
-        }
-    }
+	pub fn is_list_t(&self) -> bool {
+		match self {
+			ListT(_) => true,
+			_ => false,
+		}
+	}
 }
 
 pub fn to_type(var: &Variable) -> VariableT {
@@ -95,6 +95,9 @@ pub fn to_type(var: &Variable) -> VariableT {
 
 pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	if words.len() == 1 {
+		if helper::has_parentheses(words[0]) {
+			return evaluate_statement(&helper::split(helper::remove_parens(words[0]))?, variables);
+		}
 		if let Some(n) = variables.get(words[0]) {
 			return Ok(n.clone());
 		}
@@ -111,13 +114,13 @@ pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Varia
 	if list_op.is_ok() {
 		return list_op;
 	}
-	
+
 	Err(perr())
 }
 
 pub fn is_ok(name: &str) -> bool {
 	!KEYWORDS.contains(&name)
-        && !name.is_empty()
-        && name.as_bytes().get(0).map(|d| d.is_ascii_digit()) != Some(true)
-        && !helper::is_list(name)
+		&& !name.is_empty()
+		&& name.as_bytes().get(0).map(|d| d.is_ascii_digit()) != Some(true)
+		&& !helper::is_list(name)
 }
