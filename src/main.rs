@@ -229,7 +229,7 @@ fn main() -> Result<(), CustomErr> {
 		let words = {
 			let words = helper::split(input_line.trim());
 			if words.is_err() {
-				println!("{:?}", words);
+				eprintln!("{:3}: {:?}", index, words);
 				continue;
 			}
 			words.unwrap()
@@ -239,13 +239,13 @@ fn main() -> Result<(), CustomErr> {
 			continue;
 		}
 		if creating_function >= 1 {
-			if words[0].trim() == "end" {
+			if words[0] == "end" {
 				creating_function -= 1;
 			}
 			continue;
 		}
 		if skipping_if >= 1 {
-			match words[0].trim() {
+			match words[0] {
 				"endif" => skipping_if -= 1,
 				"if" => skipping_if += 1,
 				_ => {}
@@ -285,7 +285,7 @@ fn main() -> Result<(), CustomErr> {
 			}
 			*variables.get_mut("last").ok_or_else(|| serr(line!(), file!()))? = last;
 		} else {
-			println!("{:?}", result);
+			eprintln!("{:3}: {:?}", index, result);
 			*variables.get_mut("last").ok_or_else(|| serr(line!(), file!()))? = Boolean(false);
 		}
 		if let Some(target) = jump_next {

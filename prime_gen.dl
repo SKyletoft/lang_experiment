@@ -20,3 +20,7 @@ fn primes max num
 		let primes = primes + candidate
 	jump loop_start
 end
+
+
+
+exit
