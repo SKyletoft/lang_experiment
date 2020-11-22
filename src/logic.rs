@@ -29,83 +29,12 @@ fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable
 	Ok(res)
 }
 
-fn if_statement(
-	words: &[&str],
-	variables: &Variables,
-	skipping_if: &mut isize,
-) -> Result<Variable, CustomErr> {
-	let parsed = variable::evaluate_statement(words, variables)?;
-	let b = variable::un_bool(&parsed)?;
-	if !b {
-		*skipping_if += 1;
-	}
-	Ok(parsed)
-}
-
-fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	let stdout = io::stdout();
-	let mut lock = stdout.lock();
-	write!(lock, "> ")?;
-	for &word in words {
-		let result = variables.get(word).ok_or_else(|| perr(line!(), file!()))?;
-		write!(lock, "{} ", result)?;
-	}
-	writeln!(lock)?;
-	Ok(Boolean(true))
-}
-
-fn print_string(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	let (typ, vec) = variable::un_list(variable::evaluate_statement(words, variables)?)?;
-	if typ != CharT {
-		return Err(terr(line!(), file!()));
-	}
-	let stdout = io::stdout();
-	let mut lock = stdout.lock();
-	for letter in vec.iter() {
-		write!(lock, "{}", letter)?;
-	}
-	writeln!(lock)?;
-	Ok(Boolean(true))
-}
-
-fn print_type(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	let var = variable::evaluate_statement(words, variables)?;
-	println!("> {}", variable::to_type(&var));
-	Ok(var)
-}
-
-fn clear() -> Result<Variable, CustomErr> {
-	unimplemented!()
-}
-
 fn create_labels(words: &[&str], labels: &mut Labels, index: usize) -> Result<Variable, CustomErr> {
 	if words.is_empty() {
 		return Err(perr(line!(), file!()));
 	}
 	labels.insert(words[0].to_string(), index);
 	Ok(Boolean(true))
-}
-
-fn jump(
-	words: &[&str],
-	labels: &Labels,
-	jump_next: &mut Option<usize>,
-) -> Result<Variable, CustomErr> {
-	let &word = words.get(0).ok_or_else(|| perr(line!(), file!()))?;
-	let &target = labels.get(word).ok_or_else(|| perr(line!(), file!()))?;
-	*jump_next = Some(target);
-	Ok(Boolean(true))
-}
-
-fn jump_rel(
-	words: &[&str],
-	variables: &Variables,
-	index: usize,
-	jump_next: &mut Option<usize>,
-) -> Result<Variable, CustomErr> {
-	let n = variable::un_number(&variable::evaluate_statement(words, variables)?)?;
-	*jump_next = Some((index as isize).saturating_add(n as isize) as usize);
-	Ok(Number(n))
 }
 
 fn create_function(
@@ -188,6 +117,77 @@ fn function_call(
 	Ok(Boolean(false))
 }
 
+fn if_statement(
+	words: &[&str],
+	variables: &Variables,
+	skipping_if: &mut isize,
+) -> Result<Variable, CustomErr> {
+	let parsed = variable::evaluate_statement(words, variables)?;
+	let b = variable::un_bool(&parsed)?;
+	if !b {
+		*skipping_if += 1;
+	}
+	Ok(parsed)
+}
+
+fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	let stdout = io::stdout();
+	let mut lock = stdout.lock();
+	write!(lock, "> ")?;
+	for &word in words {
+		let result = variables.get(word).ok_or_else(|| perr(line!(), file!()))?;
+		write!(lock, "{} ", result)?;
+	}
+	writeln!(lock)?;
+	Ok(Boolean(true))
+}
+
+fn print_string(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	let (typ, vec) = variable::un_list(variable::evaluate_statement(words, variables)?)?;
+	if typ != CharT {
+		return Err(terr(line!(), file!()));
+	}
+	let stdout = io::stdout();
+	let mut lock = stdout.lock();
+	for letter in vec.iter() {
+		write!(lock, "{}", letter)?;
+	}
+	writeln!(lock)?;
+	Ok(Boolean(true))
+}
+
+fn print_type(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	let var = variable::evaluate_statement(words, variables)?;
+	println!("> {}", variable::to_type(&var));
+	Ok(var)
+}
+
+fn clear() -> Result<Variable, CustomErr> {
+	unimplemented!()
+}
+
+fn jump(
+	words: &[&str],
+	labels: &Labels,
+	jump_next: &mut Option<usize>,
+) -> Result<Variable, CustomErr> {
+	let &word = words.get(0).ok_or_else(|| perr(line!(), file!()))?;
+	let &target = labels.get(word).ok_or_else(|| perr(line!(), file!()))?;
+	*jump_next = Some(target);
+	Ok(Boolean(true))
+}
+
+fn jump_rel(
+	words: &[&str],
+	variables: &Variables,
+	index: usize,
+	jump_next: &mut Option<usize>,
+) -> Result<Variable, CustomErr> {
+	let n = variable::un_number(&variable::evaluate_statement(words, variables)?)?;
+	*jump_next = Some((index as isize).saturating_add(n as isize) as usize);
+	Ok(Number(n))
+}
+
 fn solve_function_or_variable(
 	words: &[&str],
 	variables: &mut Variables,
@@ -196,12 +196,8 @@ fn solve_function_or_variable(
 	index: usize,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
-	let call = function_call(words, variables, functions, call_stack, index, jump_next);
-	if call.is_ok() {
-		call
-	} else {
-		variable::evaluate_statement(words, variables)
-	}
+	function_call(words, variables, functions, call_stack, index, jump_next)
+		.or_else(|_| variable::evaluate_statement(words, variables))
 }
 
 pub fn run(mut code: Code) -> Result<(), CustomErr> {

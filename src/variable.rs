@@ -83,9 +83,24 @@ impl fmt::Display for VariableT {
 	}
 }
 
+impl From<Variable> for VariableT {
+	fn from(rhs: Variable) -> Self {
+		to_type(&rhs)
+	}
+}
+
 impl VariableT {
 	pub fn is_list_t(&self) -> bool {
 		matches!(self, &ListT(_))
+	}
+}
+
+pub fn to_type(var: &Variable) -> VariableT {
+	match var {
+		Number(_) => NumberT,
+		Char(_) => CharT,
+		Boolean(_) => BooleanT,
+		List(t, _) => ListT(Box::new(t.clone())),
 	}
 }
 
@@ -118,45 +133,19 @@ pub fn un_list(var: Variable) -> Result<(VariableT, Vec<Variable>), CustomErr> {
 	}
 }
 
-pub fn to_type(var: &Variable) -> VariableT {
-	match var {
-		Number(_) => NumberT,
-		Char(_) => CharT,
-		Boolean(_) => BooleanT,
-		List(t, _) => ListT(Box::new(t.clone())),
-	}
-}
-
 pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	if words.is_empty() {
-		return Err(perr(line!(), file!()));
-	}
-	if words.len() == 1 {
-		if helper::has_parentheses(words[0]) {
-			return evaluate_statement(&helper::split(helper::remove_parens(words[0]))?, variables);
+	match words {
+		[] => Err(perr(line!(), file!())),
+		[s] if helper::has_parentheses(s) => {
+			evaluate_statement(&helper::split(helper::remove_parens(words[0]))?, variables)
 		}
-		if let Some(n) = variables.get(words[0]) {
-			return Ok(n.clone());
-		}
+		[s] if variables.contains_key(*s) => Ok(variables.get(*s).expect("Unreachable?").clone()),
+		_ => floats::evaluate_floats(words, variables)
+			.or_else(|_| bools::evaluate_bools(words, variables))
+			.or_else(|_| chars::char_op(words, variables))
+			.or_else(|_| list::list_op(words, variables))
+			.map_err(|_| perr(line!(), file!())),
 	}
-	let f = floats::evaluate_floats(words, variables);
-	if f.is_ok() {
-		return f;
-	}
-	let b = bools::evaluate_bools(words, variables);
-	if b.is_ok() {
-		return b;
-	}
-	let c = chars::char_op(words, variables);
-	if c.is_ok() {
-		return c;
-	}
-	let l = list::list_op(words, variables);
-	if l.is_ok() {
-		return l;
-	}
-
-	Err(perr(line!(), file!()))
 }
 
 pub fn is_ok(name: &str) -> bool {
