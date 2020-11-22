@@ -121,25 +121,23 @@ fn order_of_operations_parse(words: &[&str], variables: &Variables) -> Result<Va
 }
 
 fn logic_parse(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	if words.len() != 3 {
-		return Err(perr(line!(), file!()));
-	}
+	let words = words.get(..3).ok_or_else(|| perr(line!(), file!()))?;
+	let op = words[1];
+	let f = match op {
+		"==" => |l: f64, r: f64| (l - r).abs() < f64::EPSILON,
+		"<" => |l, r| l < r,
+		">" => |l, r| l > r,
+		"<=" =>|l, r| l <= r,
+		">=" => |l, r| l >= r,
+		_ => return Err(perr(line!(), file!())),
+	};
 	let lhs = variable::evaluate_statement(&words[0..1], variables)?;
 	let rhs = variable::evaluate_statement(&words[2..3], variables)?;
 	let lhs_n = variable::un_number(&lhs)?;
 	let rhs_n = variable::un_number(&rhs)?;
-	let op = words[1];
 
-	let res = match op {
-		"==" => lhs == rhs,
-		"<" => lhs_n < rhs_n,
-		"<=" => lhs_n <= rhs_n,
-		">" => lhs_n > rhs_n,
-		">=" => lhs_n >= rhs_n,
-		_ => return Err(perr(line!(), file!())),
-	};
 
-	Ok(Boolean(res))
+	Ok(Boolean(f(lhs_n, rhs_n)))
 }
 
 pub fn evaluate_floats(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {

@@ -52,17 +52,17 @@ pub fn char_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 			Ok(Char(n as u8 as char))
 		}
 		[lhs, op, rhs] => {
-			let l = variable::un_char(&parse_or_get(lhs, variables)?)?;
-			let r = variable::un_char(&parse_or_get(rhs, variables)?)?;
-			let res = match *op {
-				"==" => l == r,
-				"<" => l < r,
-				">" => l > r,
-				"<=" => l <= r,
-				">=" => l >= r,
+			let f = match *op {
+				"==" => |l, r| l == r,
+				"<" => |l, r| l < r,
+				">" => |l, r| l > r,
+				"<=" => |l, r| l <= r,
+				">=" => |l, r| l >= r,
 				_ => return Err(perr(line!(), file!())),
 			};
-			Ok(Boolean(res))
+			let l = variable::un_char(&parse_or_get(lhs, variables)?)?;
+			let r = variable::un_char(&parse_or_get(rhs, variables)?)?;
+			Ok(Boolean(f(l, r)))
 		}
 		[statement] => parse_or_get(statement, variables),
 		_ => Err(perr(line!(), file!())),

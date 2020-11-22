@@ -21,7 +21,7 @@ fn prime_gen max num;
 		jump prime_test;
 end;
 
-let count = 200;
+let count = 2000;
 puts ("The first " ++ (num count)) ++ " primes";
 prime_gen(count);
 print last;
