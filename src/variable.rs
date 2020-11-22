@@ -128,6 +128,9 @@ pub fn to_type(var: &Variable) -> VariableT {
 }
 
 pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	if words.is_empty() {
+		return Err(perr(line!(), file!()));
+	}
 	if words.len() == 1 {
 		if helper::has_parentheses(words[0]) {
 			return evaluate_statement(&helper::split(helper::remove_parens(words[0]))?, variables);
@@ -163,4 +166,13 @@ pub fn is_ok(name: &str) -> bool {
 		&& !helper::is_list(name)
 		&& !helper::is_string(name)
 		&& !helper::has_parentheses(name)
+}
+
+pub fn owned_name(name: Option<&&str>) -> Result<String, CustomErr> {
+	let name = name.ok_or_else(|| perr(line!(), file!()))?;
+	if is_ok(name) {
+		Ok(name.to_string())
+	} else {
+		Err(serr(line!(), file!()))
+	}
 }

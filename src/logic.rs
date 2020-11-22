@@ -1,10 +1,6 @@
 use crate::*;
 
 fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
-	if words.get(0).map(|x| variable::is_ok(x)) != Some(true) {
-		return Err(perr(line!(), file!()));
-	}
-
 	let res = match &words[1..] {
 		[] => variables
 			.get("last")
@@ -28,7 +24,7 @@ fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable
 		}
 		_ => return Err(perr(line!(), file!())),
 	};
-	let name = words[0].to_string();
+	let name = variable::owned_name(words.get(0))?;
 	variables.insert(name, res.clone());
 	Ok(res)
 }
@@ -79,7 +75,7 @@ fn print_type(words: &[&str], variables: &Variables) -> Result<Variable, CustomE
 }
 
 fn clear() -> Result<Variable, CustomErr> {
-	Ok(Boolean(true))
+	unimplemented!()
 }
 
 fn create_labels(words: &[&str], labels: &mut Labels, index: usize) -> Result<Variable, CustomErr> {
@@ -95,10 +91,8 @@ fn jump(
 	labels: &Labels,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
-	if words.is_empty() {
-		return Err(perr(line!(), file!()));
-	}
-	let &target = labels.get(words[0]).ok_or_else(|| perr(line!(), file!()))?;
+	let &word = words.get(0).ok_or_else(|| perr(line!(), file!()))?;
+	let &target = labels.get(word).ok_or_else(|| perr(line!(), file!()))?;
 	*jump_next = Some(target);
 	Ok(Boolean(true))
 }
@@ -109,10 +103,7 @@ fn jump_rel(
 	index: usize,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
-	if words.is_empty() {
-		return Err(perr(line!(), file!()));
-	}
-	let n = variable::un_number(&floats::evaluate_floats(words, variables)?)?;
+	let n = variable::un_number(&variable::evaluate_statement(words, variables)?)?;
 	*jump_next = Some((index as isize).saturating_add(n as isize) as usize);
 	Ok(Number(n))
 }
@@ -126,9 +117,6 @@ fn create_function(
 	if words.len() % 2 == 0 {
 		return Err(serr(line!(), file!()));
 	}
-	if !variable::is_ok(words[0]) {
-		return Err(serr(line!(), file!()));
-	}
 	let args = {
 		let mut vec = Vec::with_capacity(words.len() / 2);
 		for (name, typ) in words
@@ -137,13 +125,13 @@ fn create_function(
 			.step_by(2)
 			.zip(words.iter().step_by(2).skip(1))
 		{
-			let name = name.to_string();
+			let name = variable::owned_name(Some(name))?;
 			let typ = typ.parse()?;
 			vec.push((name, typ));
 		}
 		vec
 	};
-	let name = words[0].to_owned();
+	let name = variable::owned_name(words.get(0))?;
 	functions.insert(name, (args, index));
 	*creating_function += 1;
 	Ok(Boolean(true))
