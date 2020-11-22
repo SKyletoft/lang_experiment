@@ -1,38 +1,36 @@
 use crate::*;
 
 fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
-	if words.is_empty() || words.len() == 2 || words.get(0) == Some(&"last") {
+	if words.get(0).map(|x| variable::is_ok(x)) != Some(true) {
 		return Err(perr(line!(), file!()));
 	}
-	if !variable::is_ok(words[0]) {
-		return Err(serr(line!(), file!()));
-	}
-	let new = if words.len() == 1 {
-		variables
+
+	let res = match &words[1..] {
+		[] => variables
 			.get("last")
 			.ok_or_else(|| serr(line!(), file!()))?
-			.clone()
-	} else if words.get(1) == Some(&"=") {
-		variable::evaluate_statement(&words[2..], variables)?
-	} else if words.get(2) == Some(&"=") {
-		match words[1].parse::<VariableT>()? {
-			NumberT => floats::evaluate_floats(&words[3..], variables)?,
-			BooleanT => bools::evaluate_bools(&words[3..], variables)?,
-			CharT => unimplemented!(),
-			ListT(typ) => {
-				let parsed = list::list_op(&words[3..], variables)?;
-				if variable::to_type(&parsed) != *typ {
-					return Err(terr(line!(), file!()));
+			.clone(),
+		["=", ..] => variable::evaluate_statement(&words[2..], variables)?,
+		[typ, "=", ..] => {
+			let rest = &words[3..];
+			match typ.parse::<VariableT>()? {
+				NumberT => floats::evaluate_floats(rest, variables)?,
+				BooleanT => bools::evaluate_bools(rest, variables)?,
+				CharT => chars::char_op(rest, variables)?,
+				ListT(typ) => {
+					let parsed = list::list_op(rest, variables)?;
+					if variable::to_type(&parsed) != *typ {
+						return Err(terr(line!(), file!()));
+					}
+					parsed
 				}
-				parsed
 			}
 		}
-	} else {
-		return Err(perr(line!(), file!()));
+		_ => return Err(perr(line!(), file!())),
 	};
 	let name = words[0].to_string();
-	variables.insert(name, new.clone());
-	Ok(new)
+	variables.insert(name, res.clone());
+	Ok(res)
 }
 
 fn if_statement(
@@ -115,8 +113,8 @@ fn jump_rel(
 		return Err(perr(line!(), file!()));
 	}
 	let n = variable::un_number(&floats::evaluate_floats(words, variables)?)?;
-		*jump_next = Some((index as isize).saturating_add(n as isize) as usize);
-		Ok(Number(n))
+	*jump_next = Some((index as isize).saturating_add(n as isize) as usize);
+	Ok(Number(n))
 }
 
 fn create_function(
@@ -242,7 +240,7 @@ pub fn run(mut code: Code) -> Result<(), CustomErr> {
 				eprintln!("{:3}: {:?}", index, words);
 				continue;
 			}
-			words.unwrap()
+			words.expect("This can't happen")
 		};
 
 		if words.is_empty() {
