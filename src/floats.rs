@@ -99,10 +99,7 @@ fn perform_all_of_operation<'a>(
 	Ok(())
 }
 
-fn order_of_operations_parse(
-	words: &[&str],
-	variables: &Variables,
-) -> Result<Variable, CustomErr> {
+fn order_of_operations_parse(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	let mut words: Vec<Op> = words.iter().map(|x| Unparsed(x)).collect();
 
 	let operator_fn_pair: [(&str, OpFnPtr); 5] = [
@@ -145,10 +142,7 @@ fn logic_parse(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 	Ok(Boolean(res))
 }
 
-pub fn evaluate_floats(
-	words: &[&str],
-	variables: &Variables,
-) -> Result<Variable, CustomErr> {
+pub fn evaluate_floats(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	let ooop = order_of_operations_parse(words, variables);
 	if ooop.is_ok() {
 		return ooop;

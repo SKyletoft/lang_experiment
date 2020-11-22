@@ -110,7 +110,7 @@ pub fn un_char(var: &Variable) -> Result<char, CustomErr> {
 		Err(terr(line!(), file!()))
 	}
 }
-pub fn un_list<'a>(var: &'a Variable) -> Result<(&'a VariableT, &'a Vec<Variable>), CustomErr> {
+pub fn un_list(var: Variable) -> Result<(VariableT, Vec<Variable>), CustomErr> {
 	if let List(t, v) = var {
 		Ok((t, v))
 	} else {

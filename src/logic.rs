@@ -40,14 +40,12 @@ fn if_statement(
 	variables: &Variables,
 	skipping_if: &mut isize,
 ) -> Result<Variable, CustomErr> {
-	if let Boolean(b) = variable::evaluate_statement(words, variables)? {
-		if !b {
-			*skipping_if += 1;
-		}
-		Ok(Boolean(b))
-	} else {
-		Err(terr(line!(), file!()))
+	let parsed = variable::evaluate_statement(words, variables)?;
+	let b = variable::un_bool(&parsed)?;
+	if !b {
+		*skipping_if += 1;
 	}
+	Ok(parsed)
 }
 
 fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
@@ -63,17 +61,17 @@ fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 }
 
 fn print_string(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	if let List(CharT, vec) = variable::evaluate_statement(words, variables)? {
-		let stdout = io::stdout();
-		let mut lock = stdout.lock();
-		for letter in vec.iter() {
-			write!(lock, "{}", letter)?;
-		}
-		writeln!(lock)?;
-		Ok(Boolean(true))
-	} else {
-		Err(terr(line!(), file!()))
+	let (typ, vec) = variable::un_list(variable::evaluate_statement(words, variables)?)?;
+	if typ != CharT {
+		return Err(terr(line!(), file!()));
 	}
+	let stdout = io::stdout();
+	let mut lock = stdout.lock();
+	for letter in vec.iter() {
+		write!(lock, "{}", letter)?;
+	}
+	writeln!(lock)?;
+	Ok(Boolean(true))
 }
 
 fn print_type(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
@@ -116,12 +114,9 @@ fn jump_rel(
 	if words.is_empty() {
 		return Err(perr(line!(), file!()));
 	}
-	if let Number(n) = floats::evaluate_floats(words, variables)? {
+	let n = variable::un_number(&floats::evaluate_floats(words, variables)?)?;
 		*jump_next = Some((index as isize).saturating_add(n as isize) as usize);
 		Ok(Number(n))
-	} else {
-		Err(serr(line!(), file!()))
-	}
 }
 
 fn create_function(

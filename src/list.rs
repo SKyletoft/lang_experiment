@@ -1,20 +1,5 @@
 use crate::*;
 
-pub fn evaluate_list_or_string(
-	words: &[&str],
-	variables: &Variables,
-) -> Result<Variable, CustomErr> {
-	let list = evaluate_list(words, variables);
-	if list.is_ok() {
-		return list;
-	}
-	let string = evaluate_string(words);
-	if string.is_ok() {
-		return string;
-	}
-	Err(perr(line!(), file!()))
-}
-
 pub fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	if words.len() != 1 {
 		return Err(perr(line!(), file!()));
@@ -45,11 +30,7 @@ pub fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, 
 	Ok(List(typ, vec))
 }
 
-pub fn evaluate_string(words: &[&str]) -> Result<Variable, CustomErr> {
-	if words.len() != 1 {
-		return Err(perr(line!(), file!()));
-	}
-	let word = words[0];
+pub fn evaluate_string(word: &str) -> Result<Variable, CustomErr> {
 	if helper::is_string(word) {
 		Ok(List(
 			CharT,
@@ -64,16 +45,13 @@ pub fn parse_list_and_index(
 	list: Variable,
 	index: Variable,
 ) -> Result<(VariableT, Vec<Variable>, usize), CustomErr> {
-	if let (List(t, vec), Number(i)) = (list, index) {
-		let index = i as usize;
-		if vec.len() >= index {
-			Ok((t, vec, index))
-		} else {
-			eprintln!("Out of bounds");
-			Err(serr(line!(), file!()))
-		}
+	let (typ, vec) = variable::un_list(list)?;
+	let i = variable::un_number(&index)? as usize;
+	if vec.len() >= i {
+		Ok((typ, vec, i))
 	} else {
-		Err(terr(line!(), file!()))
+		eprintln!("Out of bounds");
+		Err(serr(line!(), file!()))
 	}
 }
 
@@ -102,15 +80,13 @@ pub fn list_len(list: &Variable) -> Result<usize, CustomErr> {
 }
 
 pub fn join_lists(lhs: Variable, rhs: Variable) -> Result<Variable, CustomErr> {
-	if let (List(typ1, mut list), List(typ2, mut other_list)) = (lhs, rhs) {
-		if typ1 != typ2 {
-			return Err(terr(line!(), file!()));
-		}
-		list.append(&mut other_list);
-		Ok(List(typ1, list))
-	} else {
-		Err(terr(line!(), file!()))
+	let (typ_l, mut list_l) = variable::un_list(lhs)?;
+	let (typ_r, mut list_r) = variable::un_list(rhs)?;
+	if typ_l != typ_r {
+		return Err(terr(line!(), file!()));
 	}
+	list_l.append(&mut list_r);
+	Ok(List(typ_l, list_l))
 }
 
 pub fn get_item(list: Variable, index: Variable) -> Result<Variable, CustomErr> {
@@ -122,17 +98,17 @@ pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 	if words.is_empty() {
 		return Err(serr(line!(), file!()));
 	}
-	let list = if words
-		.get(0)
-		.map(|s| !helper::is_list(s) && !helper::is_string(s))
-		== Some(true)
-	{
-		if words.len() == 1 {
+	let first = words[0];
+	let words = &words[1..];
+	let list = if helper::is_list(first) {
+		evaluate_list(&[first], variables)?
+	} else if helper::is_string(first) {
+		evaluate_string(first)?
+	} else {
+		if words.is_empty() {
 			return Err(perr(line!(), file!()));
 		}
-		variable::evaluate_statement(&words[..1], variables)?
-	} else {
-		evaluate_list_or_string(&words[..1], variables)?
+		variable::evaluate_statement(&[first], variables)?
 	};
 	if !variable::to_type(&list).is_list_t() {
 		return Err(terr(line!(), file!()));
@@ -141,20 +117,16 @@ pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 	let len = Number(list_len(&list)? as f64);
 	let val = match words {
 		[] => list,
-		[_, "len"] => len,
-		[_, "+", item] => {
-			add_to_list(list, len, variable::evaluate_statement(&[item], variables)?)?
-		}
-		[_, "+", index, item] => add_to_list(
+		["len"] => len,
+		["+", item] => add_to_list(list, len, variable::evaluate_statement(&[item], variables)?)?,
+		["+", index, item] => add_to_list(
 			list,
 			variable::evaluate_statement(&[index], variables)?,
 			variable::evaluate_statement(&[item], variables)?,
 		)?,
-		[_, "-", index] => {
-			remove_from_list(list, variable::evaluate_statement(&[index], variables)?)?
-		}
-		[_, "++", rhs] => join_lists(list, variable::evaluate_statement(&[rhs], variables)?)?,
-		[_, "@", index] => get_item(list, variable::evaluate_statement(&[index], variables)?)?,
+		["-", index] => remove_from_list(list, variable::evaluate_statement(&[index], variables)?)?,
+		["++", rhs] => join_lists(list, variable::evaluate_statement(&[rhs], variables)?)?,
+		["@", index] => get_item(list, variable::evaluate_statement(&[index], variables)?)?,
 		_ => return Err(perr(line!(), file!())),
 	};
 	Ok(val)
