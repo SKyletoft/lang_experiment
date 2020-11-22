@@ -54,10 +54,10 @@ pub fn char_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 		[lhs, op, rhs] => {
 			let f = match *op {
 				"==" => |l, r| l == r,
-				"<" => |l, r| l < r,
-				">" => |l, r| l > r,
 				"<=" => |l, r| l <= r,
 				">=" => |l, r| l >= r,
+				"<" => |l, r| l < r,
+				">" => |l, r| l > r,
 				_ => return Err(perr(line!(), file!())),
 			};
 			let l = variable::un_char(&parse_or_get(lhs, variables)?)?;

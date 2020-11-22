@@ -125,17 +125,16 @@ fn logic_parse(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 	let op = words[1];
 	let f = match op {
 		"==" => |l: f64, r: f64| (l - r).abs() < f64::EPSILON,
+		"<=" => |l, r| l <= r,
+		">=" => |l, r| l >= r,
 		"<" => |l, r| l < r,
 		">" => |l, r| l > r,
-		"<=" =>|l, r| l <= r,
-		">=" => |l, r| l >= r,
 		_ => return Err(perr(line!(), file!())),
 	};
 	let lhs = variable::evaluate_statement(&words[0..1], variables)?;
 	let rhs = variable::evaluate_statement(&words[2..3], variables)?;
 	let lhs_n = variable::un_number(&lhs)?;
 	let rhs_n = variable::un_number(&rhs)?;
-
 
 	Ok(Boolean(f(lhs_n, rhs_n)))
 }
