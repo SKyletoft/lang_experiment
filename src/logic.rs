@@ -15,9 +15,7 @@ fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable
 				CharT => chars::char_op(rest, variables)?,
 				ListT(typ) => {
 					let parsed = list::list_op(rest, variables)?;
-					if variable::to_type(&parsed) != *typ {
-						return Err(terr(line!(), file!()));
-					}
+					variable::assert_type_of(&parsed, &*typ)?;
 					parsed
 				}
 			}
@@ -106,9 +104,7 @@ fn function_call(
 	for ((name, typ), &arg) in args_req.iter().zip(args.iter()) {
 		let split = helper::split(helper::remove_parens(arg))?;
 		let parsed = variable::evaluate_statement(&split, variables)?;
-		if variable::to_type(&parsed) != *typ {
-			return Err(terr(line!(), file!()));
-		}
+		variable::assert_type_of(&parsed, typ)?;
 		new_vars.insert(name.clone(), parsed);
 	}
 	call_stack.push((variables.clone(), index));
@@ -144,9 +140,7 @@ fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 
 fn print_string(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	let (typ, vec) = variable::un_list(variable::evaluate_statement(words, variables)?)?;
-	if typ != CharT {
-		return Err(terr(line!(), file!()));
-	}
+	variable::assert_type(&typ, &CharT)?;
 	let stdout = io::stdout();
 	let mut lock = stdout.lock();
 	for letter in vec.iter() {

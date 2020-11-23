@@ -104,6 +104,18 @@ pub fn to_type(var: &Variable) -> VariableT {
 	}
 }
 
+pub fn assert_type_of(var: &Variable, typ: &VariableT) -> Result<(), CustomErr> {
+	assert_type(&to_type(var), typ)
+}
+
+pub fn assert_type(t1: &VariableT, t2: &VariableT) -> Result<(), CustomErr> {
+	if *t1 == *t2 {
+		Ok(())
+	} else {
+		Err(terr(line!(), file!()))
+	}
+}
+
 pub fn un_number(var: &Variable) -> Result<f64, CustomErr> {
 	if let Number(n) = var {
 		Ok(*n)

@@ -1,5 +1,6 @@
 use crate::*;
 
+#[derive(Clone, Debug, PartialEq)]
 pub struct Code {
 	code_internal: String,
 	pub code: Vec<(usize, usize)>,
@@ -45,7 +46,9 @@ impl Code {
 
 	fn get_line(&'_ self, index: usize) -> Result<&'_ str, CustomErr> {
 		let (start, end) = self.code.get(index).ok_or_else(|| serr(line!(), file!()))?;
-		self.code_internal.get(*start..*end).ok_or_else(|| serr(line!(), file!()))
+		self.code_internal
+			.get(*start..*end)
+			.ok_or_else(|| serr(line!(), file!()))
 	}
 
 	pub fn next_line(&'_ mut self) -> Result<(&'_ str, bool), CustomErr> {

@@ -22,9 +22,7 @@ fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, Cust
 	}
 	for &token in iter {
 		let parsed = variable::evaluate_statement(&helper::split(token)?, variables)?;
-		if variable::to_type(&parsed) != typ {
-			return Err(perr(line!(), file!()));
-		}
+		variable::assert_type_of(&parsed, &typ)?;
 		vec.push(parsed);
 	}
 	Ok(List(typ, vec))
@@ -63,10 +61,7 @@ fn remove_from_list(list: Variable, index: Variable) -> Result<Variable, CustomE
 
 fn add_to_list(list: Variable, index: Variable, item: Variable) -> Result<Variable, CustomErr> {
 	let (t, mut vec, index) = parse_list_and_index(list, index)?;
-	let typ = variable::to_type(&item);
-	if t != typ {
-		return Err(terr(line!(), file!()));
-	}
+	variable::assert_type_of(&item, &t)?;
 	vec.insert(index, item);
 	Ok(List(t, vec))
 }
@@ -82,9 +77,7 @@ fn list_len(list: &Variable) -> Result<usize, CustomErr> {
 fn join_lists(lhs: Variable, rhs: Variable) -> Result<Variable, CustomErr> {
 	let (typ_l, mut list_l) = variable::un_list(lhs)?;
 	let (typ_r, mut list_r) = variable::un_list(rhs)?;
-	if typ_l != typ_r {
-		return Err(terr(line!(), file!()));
-	}
+	variable::assert_type(&typ_l, &typ_r)?;
 	list_l.append(&mut list_r);
 	Ok(List(typ_l, list_l))
 }
