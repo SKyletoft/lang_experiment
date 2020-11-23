@@ -1,6 +1,6 @@
 use crate::*;
 
-pub fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	if words.len() != 1 {
 		return Err(perr(line!(), file!()));
 	}
@@ -30,7 +30,7 @@ pub fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, 
 	Ok(List(typ, vec))
 }
 
-pub fn evaluate_string(word: &str) -> Result<Variable, CustomErr> {
+fn evaluate_string(word: &str) -> Result<Variable, CustomErr> {
 	if helper::is_string(word) {
 		Ok(List(
 			CharT,
@@ -41,7 +41,7 @@ pub fn evaluate_string(word: &str) -> Result<Variable, CustomErr> {
 	}
 }
 
-pub fn parse_list_and_index(
+fn parse_list_and_index(
 	list: Variable,
 	index: Variable,
 ) -> Result<(VariableT, Vec<Variable>, usize), CustomErr> {
@@ -55,13 +55,13 @@ pub fn parse_list_and_index(
 	}
 }
 
-pub fn remove_from_list(list: Variable, index: Variable) -> Result<Variable, CustomErr> {
+fn remove_from_list(list: Variable, index: Variable) -> Result<Variable, CustomErr> {
 	let (t, mut vec, index) = parse_list_and_index(list, index)?;
 	vec.remove(index);
 	Ok(List(t, vec))
 }
 
-pub fn add_to_list(list: Variable, index: Variable, item: Variable) -> Result<Variable, CustomErr> {
+fn add_to_list(list: Variable, index: Variable, item: Variable) -> Result<Variable, CustomErr> {
 	let (t, mut vec, index) = parse_list_and_index(list, index)?;
 	let typ = variable::to_type(&item);
 	if t != typ {
@@ -71,7 +71,7 @@ pub fn add_to_list(list: Variable, index: Variable, item: Variable) -> Result<Va
 	Ok(List(t, vec))
 }
 
-pub fn list_len(list: &Variable) -> Result<usize, CustomErr> {
+fn list_len(list: &Variable) -> Result<usize, CustomErr> {
 	if let List(_, l) = list {
 		Ok(l.len())
 	} else {
@@ -79,7 +79,7 @@ pub fn list_len(list: &Variable) -> Result<usize, CustomErr> {
 	}
 }
 
-pub fn join_lists(lhs: Variable, rhs: Variable) -> Result<Variable, CustomErr> {
+fn join_lists(lhs: Variable, rhs: Variable) -> Result<Variable, CustomErr> {
 	let (typ_l, mut list_l) = variable::un_list(lhs)?;
 	let (typ_r, mut list_r) = variable::un_list(rhs)?;
 	if typ_l != typ_r {
@@ -89,7 +89,7 @@ pub fn join_lists(lhs: Variable, rhs: Variable) -> Result<Variable, CustomErr> {
 	Ok(List(typ_l, list_l))
 }
 
-pub fn get_item(list: Variable, index: Variable) -> Result<Variable, CustomErr> {
+fn get_item(list: Variable, index: Variable) -> Result<Variable, CustomErr> {
 	let (_, mut vec, index) = parse_list_and_index(list, index)?;
 	Ok(vec.remove(index))
 }

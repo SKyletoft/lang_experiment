@@ -4,7 +4,6 @@ pub struct Code {
 	code_internal: String,
 	pub code: Vec<(usize, usize)>,
 	pub index: usize,
-	pub ascii: bool
 }
 
 impl Code {
@@ -18,21 +17,13 @@ impl Code {
 		Code {
 			code_internal: String::new(),
 			code: Vec::new(),
-			index: 0,
-			ascii: true
+			index: usize::MAX,
 		}
 	}
 
-	//PLAN: Move all the code into a single long string.
-	//Change the public code to a vector that only borrows slices from the non-public string.
-	//Do some maybe unsafe magic to have an array that can borrow while the string can be edited.
-	//Vector might have to store usize pairs for indexing rather than direct slices
 	pub fn import(&mut self, file: &str) -> Result<(), CustomErr> {
 		let mut file_content = fs::read_to_string(file)?.into_bytes();
 		for byte in file_content.iter_mut() {
-			if *byte >= 0b1000_000 {
-				self.ascii = false;
-			}
 			*byte = match *byte {
 				b'\n' => b' ',
 				b';' => b'\n',
@@ -57,10 +48,6 @@ impl Code {
 		self.code_internal.get(*start..*end).ok_or_else(|| serr(line!(), file!()))
 	}
 
-	fn get_last_line(&'_ self) -> Result<&'_ str, CustomErr> {
-		self.get_line(self.code.len().wrapping_sub(1))
-	}
-
 	pub fn next_line(&'_ mut self) -> Result<(&'_ str, bool), CustomErr> {
 		self.index += 1;
 		let mut interactive = false;
@@ -70,7 +57,7 @@ impl Code {
 			self.push_line(&input_line);
 			interactive = true;
 		}
-		Ok((self.get_last_line()?, interactive))
+		Ok((self.get_line(self.index)?, interactive))
 	}
 }
 

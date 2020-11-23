@@ -12,7 +12,7 @@ fn evaluate_char(chr: &str) -> Result<Variable, CustomErr> {
 	}
 }
 
-pub fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
+fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	let val = if helper::has_parentheses(s) {
 		variable::evaluate_statement(&helper::split(helper::remove_parens(s))?, variables)?
 	} else if let Some(n) = variables.get(s) {
