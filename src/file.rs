@@ -1,13 +1,13 @@
 use crate::*;
 
-pub struct Code<'a> {
+pub struct Code {
 	code_internal: String,
-	pub code: Vec<&'a str>,
+	pub code: Vec<(usize, usize)>,
 	pub index: usize,
 	pub ascii: bool
 }
 
-impl<'a> Code<'a> {
+impl Code {
 	pub fn from_file(file: &str) -> Result<Code, CustomErr> {
 		let mut code = Code::new();
 		code.import(file)?;
@@ -30,6 +30,9 @@ impl<'a> Code<'a> {
 	pub fn import(&mut self, file: &str) -> Result<(), CustomErr> {
 		let mut file_content = fs::read_to_string(file)?.into_bytes();
 		for byte in file_content.iter_mut() {
+			if *byte >= 0b1000_000 {
+				self.ascii = false;
+			}
 			*byte = match *byte {
 				b'\n' => b' ',
 				b';' => b'\n',
@@ -38,9 +41,24 @@ impl<'a> Code<'a> {
 		}
 		let file_content = String::from_utf8(file_content)?;
 		for line in file_content.lines() {
-			self.code.push(line.to_owned());
+			self.push_line(line);
 		}
 		Ok(())
+	}
+
+	fn push_line(&mut self, line: &str) {
+		let line_start = self.code_internal.len();
+		self.code_internal.push_str(line);
+		self.code.push((line_start, self.code_internal.len()));
+	}
+
+	fn get_line(&'_ self, index: usize) -> Result<&'_ str, CustomErr> {
+		let (start, end) = self.code.get(index).ok_or_else(|| serr(line!(), file!()))?;
+		self.code_internal.get(*start..*end).ok_or_else(|| serr(line!(), file!()))
+	}
+
+	fn get_last_line(&'_ self) -> Result<&'_ str, CustomErr> {
+		self.get_line(self.code.len().wrapping_sub(1))
 	}
 
 	pub fn next_line(&'_ mut self) -> Result<(&'_ str, bool), CustomErr> {
@@ -49,10 +67,10 @@ impl<'a> Code<'a> {
 		while self.index >= self.code.len() {
 			let mut input_line = String::new();
 			io::stdin().read_line(&mut input_line)?;
-			self.code.push(input_line);
+			self.push_line(&input_line);
 			interactive = true;
 		}
-		Ok((&self.code[self.index], interactive))
+		Ok((self.get_last_line()?, interactive))
 	}
 }
 
