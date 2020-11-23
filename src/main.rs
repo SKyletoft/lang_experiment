@@ -29,7 +29,6 @@ fn main() {
 		code.import(&file)
 			.unwrap_or_else(|_| panic!("Couldn't read file: {}", &file));
 	}
-
 	match logic::run(code) {
 		Ok(_) => {}
 		Err(e) => eprintln!("{}", e),
