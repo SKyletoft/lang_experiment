@@ -1,6 +1,13 @@
 use crate::*;
 
-pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
+pub fn split(s: &'_ str, ascii: bool) -> Result<Vec<&'_ str>, CustomErr> {
+	match ascii {
+		true => split_u8(s),
+		false => split_char(s),
+	}
+}
+
+fn split_char(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 	let keep_closure = |slice: &str| slice.chars().any(|c| !c.is_whitespace());
 	let mut vec = Vec::new();
 	let mut parentheses = 0;
@@ -82,6 +89,106 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 			}
 
 			(0, 0, 1, '\\') => {
+				escape = true;
+				continue;
+			}
+			_ => {}
+		}
+		escape = false;
+	}
+	let slice = &s[start..];
+	if keep_closure(slice) {
+		vec.push(slice);
+	}
+	if parentheses == 0 && brackets == 0 && quotes == 0 {
+		Ok(vec)
+	} else {
+		Err(perr(line!(), file!()))
+	}
+}
+
+fn split_u8(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
+	let keep_closure = |slice: &str| slice.bytes().any(|c| !c.is_ascii_whitespace());
+	let mut vec = Vec::new();
+	let mut parentheses = 0;
+	let mut brackets = 0;
+	let mut start = 0;
+	let mut quotes = 0;
+	let mut escape = false;
+	for (i, c) in s.bytes().enumerate() {
+		match (brackets, parentheses, quotes, c) {
+			(0, 0, 0, b'[') => {
+				let slice = &s[start..i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
+				start = i;
+				brackets += 1;
+			}
+			(_, 0, 0, b'[') => {
+				brackets += 1;
+			}
+			(1, 0, 0, b']') => {
+				let slice = &s[start..=i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
+				start = i + 1;
+				brackets -= 1;
+			}
+			(_, 0, 0, b']') => {
+				brackets -= 1;
+			}
+
+			(0, 0, 0, b'(') => {
+				let slice = &s[start..i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
+				start = i;
+				parentheses += 1;
+			}
+			(0, _, 0, b'(') => {
+				parentheses += 1;
+			}
+			(0, 1, 0, b')') => {
+				let slice = &s[start..=i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
+				start = i + 1;
+				parentheses -= 1;
+			}
+			(0, _, 0, b')') => {
+				parentheses -= 1;
+			}
+
+			(0, 0, 0, b'"') if !escape => {
+				let slice = &s[start..i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
+				start = i;
+				quotes += 1;
+			}
+			(0, 0, 1, b'"') if !escape => {
+				let slice = &s[start..=i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
+				start = i + 1;
+				quotes -= 1;
+			}
+
+			(0, 0, 0, _) if c.is_ascii_whitespace() => {
+				let slice = &s[start..i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
+				start = i + 1;
+			}
+
+			(0, 0, 1, b'\\') => {
 				escape = true;
 				continue;
 			}

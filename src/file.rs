@@ -1,10 +1,11 @@
 use crate::*;
 
+#[derive(Debug, Clone)]
 pub struct Code {
 	code_internal: String,
 	pub code: Vec<(usize, usize)>,
 	pub index: usize,
-	pub ascii: bool
+	pub ascii: bool,
 }
 
 impl Code {
@@ -18,8 +19,8 @@ impl Code {
 		Code {
 			code_internal: String::new(),
 			code: Vec::new(),
-			index: 0,
-			ascii: true
+			index: usize::MAX,
+			ascii: true,
 		}
 	}
 
@@ -30,7 +31,7 @@ impl Code {
 	pub fn import(&mut self, file: &str) -> Result<(), CustomErr> {
 		let mut file_content = fs::read_to_string(file)?.into_bytes();
 		for byte in file_content.iter_mut() {
-			if *byte >= 0b1000_000 {
+			if *byte >= 0b_1000_0000 {
 				self.ascii = false;
 			}
 			*byte = match *byte {
@@ -48,29 +49,28 @@ impl Code {
 
 	fn push_line(&mut self, line: &str) {
 		let line_start = self.code_internal.len();
-		self.code_internal.push_str(line);
+		self.code_internal.push_str(line.trim());
 		self.code.push((line_start, self.code_internal.len()));
 	}
 
-	fn get_line(&'_ self, index: usize) -> Result<&'_ str, CustomErr> {
+	pub fn get_line(&'_ self, index: usize) -> Result<&'_ str, CustomErr> {
 		let (start, end) = self.code.get(index).ok_or_else(|| serr(line!(), file!()))?;
-		self.code_internal.get(*start..*end).ok_or_else(|| serr(line!(), file!()))
+		self.code_internal
+			.get(*start..*end)
+			.ok_or_else(|| serr(line!(), file!()))
 	}
 
-	fn get_last_line(&'_ self) -> Result<&'_ str, CustomErr> {
-		self.get_line(self.code.len().wrapping_sub(1))
-	}
-
-	pub fn next_line(&'_ mut self) -> Result<(&'_ str, bool), CustomErr> {
+	pub fn next_line(&'_ mut self) -> Result<(&'_ str, bool, bool), CustomErr> {
 		self.index += 1;
 		let mut interactive = false;
 		while self.index >= self.code.len() {
 			let mut input_line = String::new();
 			io::stdin().read_line(&mut input_line)?;
+			self.ascii = false;
 			self.push_line(&input_line);
 			interactive = true;
 		}
-		Ok((self.get_last_line()?, interactive))
+		Ok((self.get_line(self.index)?, interactive, self.ascii))
 	}
 }
 
