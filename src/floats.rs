@@ -15,7 +15,7 @@ type OpFnPtr<'a> = fn(Box<Op<'a>>, Box<Op<'a>>) -> Op<'a>;
 
 fn evaluate_float(num: &str) -> Result<Variable, CustomErr> {
 	if !num.bytes().all(|x| x.is_ascii_digit() || x == b'.') {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 	let mut splits = num.split('.');
 	match (splits.next(), splits.next(), splits.next()) {
@@ -25,7 +25,7 @@ fn evaluate_float(num: &str) -> Result<Variable, CustomErr> {
 			let dot_index = num.bytes().rev().position(|c| c == b'.').unwrap_or(0) as i32;
 			Ok(Number(number / 10f64.powi(dot_index)))
 		}
-		_ => Err(perr(line!(), file!())),
+		_ => perr!(),
 	}
 }
 
@@ -42,7 +42,7 @@ fn get_left_and_right<'a>(
 	variables: &Variables,
 ) -> Result<(Op<'a>, Op<'a>), CustomErr> {
 	if *idx == 0 {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 	let left = match words.remove(*idx - 1) {
 		Unparsed(s) => Val(parse_or_get(s, variables)?),
@@ -58,18 +58,18 @@ fn get_left_and_right<'a>(
 
 pub fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	let val = if helper::has_parentheses(s) {
-		variable::evaluate_statement(&helper::split(helper::remove_parens(s))?, variables)?
+		variable::evaluate_statement(&helper::split(helper::remove_parentheses(s))?, variables)?
 	} else if let Some(n) = variables.get(s) {
 		n.clone()
 	} else if let Ok(n) = evaluate_float(s) {
 		n
 	} else {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	};
 	if variable::to_type(&val) == NumberT {
 		Ok(val)
 	} else {
-		Err(terr(line!(), file!()))
+		terr!()
 	}
 }
 
@@ -82,7 +82,7 @@ fn eval_op(op: Op, variables: &Variables) -> Result<f64, CustomErr> {
 		Mod(l, r) => eval_op(*l, variables)? % eval_op(*r, variables)?,
 		Val(Number(x)) => x,
 		Unparsed(s) => variable::un_number(&parse_or_get(s, variables)?)?,
-		_ => return Err(perr(line!(), file!())),
+		_ => return perr!(),
 	})
 }
 
@@ -114,14 +114,14 @@ fn order_of_operations_parse(words: &[&str], variables: &Variables) -> Result<Va
 	}
 
 	if words.len() != 1 {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 
 	Ok(Number(eval_op(words.remove(0), variables)?))
 }
 
 fn logic_parse(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	let words = words.get(..3).ok_or_else(|| perr(line!(), file!()))?;
+	let words = words.get(..3).ok_or(perrE!())?;
 	let op = words[1];
 	let f = match op {
 		"==" => |l: f64, r: f64| (l - r).abs() < f64::EPSILON,
@@ -129,7 +129,7 @@ fn logic_parse(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 		">=" => |l, r| l >= r,
 		"<" => |l, r| l < r,
 		">" => |l, r| l > r,
-		_ => return Err(perr(line!(), file!())),
+		_ => return perr!(),
 	};
 	let lhs = variable::evaluate_statement(&words[0..1], variables)?;
 	let rhs = variable::evaluate_statement(&words[2..3], variables)?;

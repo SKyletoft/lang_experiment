@@ -3,46 +3,74 @@ use std::{error, fmt};
 pub type CustomErr = Box<dyn error::Error>;
 
 #[derive(Copy, Clone, Debug)]
-pub struct ParseError {
-	line: u32,
-	file: &'static str,
-}
-impl error::Error for ParseError {}
-impl fmt::Display for ParseError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "parse error!")
-	}
-}
-pub fn perr(line: u32, file: &'static str) -> CustomErr {
-	Box::new(ParseError { line, file })
+pub enum CodeError {
+	Parse { line: u32, file: &'static str },
+	Syntax { line: u32, file: &'static str },
+	Type { line: u32, file: &'static str },
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct SyntaxError {
-	line: u32,
-	file: &'static str,
-}
-impl error::Error for SyntaxError {}
-impl fmt::Display for SyntaxError {
+impl error::Error for CodeError {}
+impl fmt::Display for CodeError {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "syntax error!")
+		match self {
+			CodeError::Parse { line: _, file: _ } => write!(f, "parse error!"),
+			CodeError::Syntax { line: _, file: _ } => write!(f, "syntax error!"),
+			CodeError::Type { line: _, file: _ } => write!(f, "type error!"),
+		}
 	}
 }
-pub fn serr(line: u32, file: &'static str) -> CustomErr {
-	Box::new(SyntaxError { line, file })
+#[macro_export]
+macro_rules! perr {
+	() => {
+		Err(Box::new(CodeError::Parse {
+			line: line!(),
+			file: file!(),
+			}))
+	};
+}
+#[macro_export]
+macro_rules! perrE {
+	() => {
+		CodeError::Parse {
+			line: line!(),
+			file: file!(),
+			}
+	};
+}
+#[macro_export]
+macro_rules! serr {
+	() => {
+		Err(Box::new(CodeError::Syntax {
+			line: line!(),
+			file: file!(),
+			}))
+	};
+}
+#[macro_export]
+macro_rules! serrE {
+	() => {
+		CodeError::Syntax {
+			line: line!(),
+			file: file!(),
+			}
+	};
 }
 
-#[derive(Copy, Clone, Debug)]
-pub struct TypeError {
-	line: u32,
-	file: &'static str,
+#[macro_export]
+macro_rules! terr {
+	() => {
+		Err(Box::new(CodeError::Type {
+			line: line!(),
+			file: file!(),
+			}))
+	};
 }
-impl error::Error for TypeError {}
-impl fmt::Display for TypeError {
-	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		write!(f, "type error!")
-	}
-}
-pub fn terr(line: u32, file: &'static str) -> CustomErr {
-	Box::new(TypeError { line, file })
+#[macro_export]
+macro_rules! terrE {
+	() => {
+		CodeError::Type {
+			line: line!(),
+			file: file!(),
+			}
+	};
 }

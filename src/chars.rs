@@ -8,24 +8,24 @@ fn evaluate_char(chr: &str) -> Result<Variable, CustomErr> {
 	let fourth = chars.next();
 	match (first, second, third, fourth) {
 		(Some('\''), Some(c), Some('\''), None) => Ok(Char(c)),
-		_ => Err(perr(line!(), file!())),
+		_ => perr!(),
 	}
 }
 
 fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	let val = if helper::has_parentheses(s) {
-		variable::evaluate_statement(&helper::split(helper::remove_parens(s))?, variables)?
+		variable::evaluate_statement(&helper::split(helper::remove_parentheses(s))?, variables)?
 	} else if let Some(n) = variables.get(s) {
 		n.clone()
 	} else if let Ok(n) = evaluate_char(s) {
 		n
 	} else {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	};
 	if variable::to_type(&val) == CharT {
 		Ok(val)
 	} else {
-		Err(terr(line!(), file!()))
+		terr!()
 	}
 }
 
@@ -38,7 +38,7 @@ pub fn char_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 		["dig", statement] => {
 			let c = variable::un_number(&floats::parse_or_get(statement, variables)?)?;
 			if c < 0. || 9. < c {
-				Err(serr(line!(), file!()))
+				serr!()
 			} else {
 				Ok(Char((c as u8 + b'0') as char))
 			}
@@ -58,13 +58,13 @@ pub fn char_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 				">=" => |l, r| l >= r,
 				"<" => |l, r| l < r,
 				">" => |l, r| l > r,
-				_ => return Err(perr(line!(), file!())),
+				_ => return perr!(),
 			};
 			let l = variable::un_char(&parse_or_get(lhs, variables)?)?;
 			let r = variable::un_char(&parse_or_get(rhs, variables)?)?;
 			Ok(Boolean(f(l, r)))
 		}
 		[statement] => parse_or_get(statement, variables),
-		_ => Err(perr(line!(), file!())),
+		_ => perr!(),
 	}
 }

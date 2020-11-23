@@ -96,11 +96,11 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 	if parentheses == 0 && brackets == 0 && quotes == 0 {
 		Ok(vec)
 	} else {
-		Err(perr(line!(), file!()))
+		perr!()
 	}
 }
 
-pub fn remove_parens(s: &'_ str) -> &'_ str {
+pub fn remove_parentheses(s: &'_ str) -> &'_ str {
 	if is_list(s) || has_parentheses(s) || is_string(s) {
 		let l = s.len();
 		&s[1..l - 1]

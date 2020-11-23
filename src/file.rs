@@ -45,14 +45,15 @@ impl Code {
 	}
 
 	fn get_line(&'_ self, index: usize) -> Result<&'_ str, CustomErr> {
-		let (start, end) = self.code.get(index).ok_or_else(|| serr(line!(), file!()))?;
-		self.code_internal
-			.get(*start..*end)
-			.ok_or_else(|| serr(line!(), file!()))
+		self.code
+			.get(index)
+			.map(|(s, e)| self.code_internal.get(*s..*e))
+			.flatten()
+			.ok_or_else(|| Box::new(perrE!()) as Box<dyn std::error::Error>)
 	}
 
 	pub fn next_line(&'_ mut self) -> Result<(&'_ str, bool), CustomErr> {
-		self.index += 1;
+		self.index = self.index.wrapping_add(1);
 		let mut interactive = false;
 		while self.index >= self.code.len() {
 			let mut input_line = String::new();

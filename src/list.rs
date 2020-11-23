@@ -2,23 +2,23 @@ use crate::*;
 
 fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	if words.len() != 1 {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 	let word = words[0];
 	if !helper::is_list(word) {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 
 	let mut vec = Vec::new();
 	let typ;
-	let split = helper::split(helper::remove_parens(word))?;
+	let split = helper::split(helper::remove_parentheses(word))?;
 	let mut iter = split.iter();
 	if let Some(&var) = iter.next() {
 		let parsed = variable::evaluate_statement(&helper::split(var)?, variables)?;
 		typ = variable::to_type(&parsed);
 		vec.push(parsed);
 	} else {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 	for &token in iter {
 		let parsed = variable::evaluate_statement(&helper::split(token)?, variables)?;
@@ -32,10 +32,10 @@ fn evaluate_string(word: &str) -> Result<Variable, CustomErr> {
 	if helper::is_string(word) {
 		Ok(List(
 			CharT,
-			helper::remove_parens(word).chars().map(Char).collect(),
+			helper::remove_parentheses(word).chars().map(Char).collect(),
 		))
 	} else {
-		Err(perr(line!(), file!()))
+		perr!()
 	}
 }
 
@@ -49,7 +49,7 @@ fn parse_list_and_index(
 		Ok((typ, vec, i))
 	} else {
 		eprintln!("Out of bounds");
-		Err(serr(line!(), file!()))
+		serr!()
 	}
 }
 
@@ -70,7 +70,7 @@ fn list_len(list: &Variable) -> Result<usize, CustomErr> {
 	if let List(_, l) = list {
 		Ok(l.len())
 	} else {
-		Err(terr(line!(), file!()))
+		terr!()
 	}
 }
 
@@ -89,7 +89,7 @@ fn get_item(list: Variable, index: Variable) -> Result<Variable, CustomErr> {
 
 pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	if words.is_empty() {
-		return Err(serr(line!(), file!()));
+		return serr!();
 	}
 	let first = words[0];
 	let words = &words[1..];
@@ -99,12 +99,12 @@ pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 		evaluate_string(first)?
 	} else {
 		if words.is_empty() {
-			return Err(perr(line!(), file!()));
+			return perr!();
 		}
 		variable::evaluate_statement(&[first], variables)?
 	};
 	if !variable::to_type(&list).is_list_t() {
-		return Err(terr(line!(), file!()));
+		return terr!();
 	}
 
 	let len = Number(list_len(&list)? as f64);
@@ -120,7 +120,7 @@ pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 		["-", index] => remove_from_list(list, variable::evaluate_statement(&[index], variables)?)?,
 		["++", rhs] => join_lists(list, variable::evaluate_statement(&[rhs], variables)?)?,
 		["@", index] => get_item(list, variable::evaluate_statement(&[index], variables)?)?,
-		_ => return Err(perr(line!(), file!())),
+		_ => return perr!(),
 	};
 	Ok(val)
 }

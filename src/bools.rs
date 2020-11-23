@@ -17,7 +17,7 @@ fn evaluate_bool(b: &str) -> Result<Variable, CustomErr> {
 	match b {
 		"true" => Ok(Boolean(true)),
 		"false" => Ok(Boolean(false)),
-		_ => Err(perr(line!(), file!())),
+		_ => perr!(),
 	}
 }
 
@@ -27,7 +27,7 @@ fn get_left_and_right<'a>(
 	variables: &Variables,
 ) -> Result<(Op<'a>, Op<'a>), CustomErr> {
 	if *idx == 0 {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 	let left = match words.remove(*idx - 1) {
 		Unparsed(s) => Val(parse_or_get(s, variables)?),
@@ -47,7 +47,7 @@ fn get_right<'a>(
 	variables: &Variables,
 ) -> Result<Op<'a>, CustomErr> {
 	if *idx >= words.len() - 1 {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 	let right = match words.remove(*idx + 1) {
 		Unparsed(s) => Val(parse_or_get(s, variables)?),
@@ -58,18 +58,18 @@ fn get_right<'a>(
 
 fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	let val = if helper::has_parentheses(s) {
-		variable::evaluate_statement(&helper::split(helper::remove_parens(s))?, variables)?
+		variable::evaluate_statement(&helper::split(helper::remove_parentheses(s))?, variables)?
 	} else if let Some(n) = variables.get(s) {
 		n.clone()
 	} else if let Ok(n) = evaluate_bool(s) {
 		n
 	} else {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	};
 	if variable::to_type(&val) == BooleanT {
 		Ok(val)
 	} else {
-		Err(terr(line!(), file!()))
+		terr!()
 	}
 }
 
@@ -82,7 +82,7 @@ fn eval_op(op: Op, variables: &Variables) -> Result<bool, CustomErr> {
 		Not(l) => !eval_op(*l, variables)?,
 		Val(Boolean(x)) => x,
 		Unparsed(s) => variable::un_bool(&parse_or_get(s, variables)?)?,
-		_ => return Err(perr(line!(), file!())),
+		_ => return perr!(),
 	})
 }
 
@@ -117,7 +117,7 @@ pub fn evaluate_bools(words: &[&str], variables: &Variables) -> Result<Variable,
 	}
 
 	if words.len() != 1 {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 
 	Ok(Boolean(eval_op(words.remove(0), variables)?))

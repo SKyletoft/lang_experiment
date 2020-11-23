@@ -45,11 +45,11 @@ impl std::str::FromStr for VariableT {
 	type Err = CustomErr;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		let res = if helper::has_parentheses(s) {
-			let split = helper::split(helper::remove_parens(s))?;
+			let split = helper::split(helper::remove_parentheses(s))?;
 			match split.as_slice() {
 				["list", typ] => ListT(Box::new(typ.parse()?)),
-				[_, _] => return Err(terr(line!(), file!())),
-				_ => return Err(serr(line!(), file!())),
+				[_, _] => return terr!(),
+				_ => return serr!(),
 			}
 		} else {
 			match s {
@@ -57,7 +57,7 @@ impl std::str::FromStr for VariableT {
 				"num" => NumberT,
 				"bool" => BooleanT,
 				"char" => CharT,
-				_ => return Err(serr(line!(), file!())),
+				_ => return serr!(),
 			}
 		};
 		Ok(res)
@@ -112,7 +112,7 @@ pub fn assert_type(t1: &VariableT, t2: &VariableT) -> Result<(), CustomErr> {
 	if *t1 == *t2 {
 		Ok(())
 	} else {
-		Err(terr(line!(), file!()))
+		terr!()
 	}
 }
 
@@ -120,43 +120,43 @@ pub fn un_number(var: &Variable) -> Result<f64, CustomErr> {
 	if let Number(n) = var {
 		Ok(*n)
 	} else {
-		Err(terr(line!(), file!()))
+		terr!()
 	}
 }
 pub fn un_bool(var: &Variable) -> Result<bool, CustomErr> {
 	if let Boolean(n) = var {
 		Ok(*n)
 	} else {
-		Err(terr(line!(), file!()))
+		terr!()
 	}
 }
 pub fn un_char(var: &Variable) -> Result<char, CustomErr> {
 	if let Char(n) = var {
 		Ok(*n)
 	} else {
-		Err(terr(line!(), file!()))
+		terr!()
 	}
 }
 pub fn un_list(var: Variable) -> Result<(VariableT, Vec<Variable>), CustomErr> {
 	if let List(t, v) = var {
 		Ok((t, v))
 	} else {
-		Err(terr(line!(), file!()))
+		terr!()
 	}
 }
 
 pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	match words {
-		[] => Err(perr(line!(), file!())),
+		[] => perr!(),
 		[s] if helper::has_parentheses(s) => {
-			evaluate_statement(&helper::split(helper::remove_parens(words[0]))?, variables)
+			evaluate_statement(&helper::split(helper::remove_parentheses(words[0]))?, variables)
 		}
 		[s] if variables.contains_key(*s) => Ok(variables.get(*s).expect("Unreachable?").clone()),
 		_ => floats::evaluate_floats(words, variables)
 			.or_else(|_| bools::evaluate_bools(words, variables))
 			.or_else(|_| chars::char_op(words, variables))
 			.or_else(|_| list::list_op(words, variables))
-			.map_err(|_| perr(line!(), file!())),
+			.map_err(|_| Box::new(perrE!()) as Box<dyn std::error::Error>),
 	}
 }
 
@@ -170,10 +170,10 @@ pub fn is_ok(name: &str) -> bool {
 }
 
 pub fn owned_name(name: Option<&&str>) -> Result<String, CustomErr> {
-	let name = name.ok_or_else(|| perr(line!(), file!()))?;
+	let name = name.ok_or(perrE!())?;
 	if is_ok(name) {
 		Ok(name.to_string())
 	} else {
-		Err(serr(line!(), file!()))
+		serr!()
 	}
 }

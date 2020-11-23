@@ -2,10 +2,7 @@ use crate::*;
 
 fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
 	let res = match &words[1..] {
-		[] => variables
-			.get("last")
-			.ok_or_else(|| serr(line!(), file!()))?
-			.clone(),
+		[] => variables.get("last").ok_or(serrE!())?.clone(),
 		["=", ..] => variable::evaluate_statement(&words[2..], variables)?,
 		[typ, "=", ..] => {
 			let rest = &words[3..];
@@ -20,7 +17,7 @@ fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable
 				}
 			}
 		}
-		_ => return Err(perr(line!(), file!())),
+		_ => return perr!(),
 	};
 	let name = variable::owned_name(words.get(0))?;
 	variables.insert(name, res.clone());
@@ -29,7 +26,7 @@ fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable
 
 fn create_labels(words: &[&str], labels: &mut Labels, index: usize) -> Result<Variable, CustomErr> {
 	if words.len() != 1 {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 	labels.insert(variable::owned_name(words.get(0))?, index);
 	Ok(Boolean(true))
@@ -42,7 +39,7 @@ fn create_function(
 	creating_function: &mut isize,
 ) -> Result<Variable, CustomErr> {
 	if words.len() % 2 == 0 {
-		return Err(serr(line!(), file!()));
+		return serr!();
 	}
 	let args = {
 		let mut vec = Vec::with_capacity(words.len() / 2);
@@ -70,11 +67,9 @@ fn exit_function(
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
 	if call_stack.is_empty() {
-		return Err(serr(line!(), file!()));
+		return serr!();
 	}
-	let return_value = variables
-		.remove("last")
-		.ok_or_else(|| serr(line!(), file!()))?;
+	let return_value = variables.remove("last").ok_or(serrE!())?;
 	let (revert_stack, return_adr) = call_stack.remove(call_stack.len() - 1);
 	*jump_next = Some(return_adr);
 	*variables = revert_stack;
@@ -90,19 +85,17 @@ fn function_call(
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
 	if words.len() != 2 {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
 	if !helper::has_parentheses(words[1]) {
-		return Err(perr(line!(), file!()));
+		return perr!();
 	}
-	let (args_req, pointer) = functions
-		.get(words[0])
-		.ok_or_else(|| perr(line!(), file!()))?;
-	let args = helper::split(helper::remove_parens(words[1]))?;
+	let (args_req, pointer) = functions.get(words[0]).ok_or(perrE!())?;
+	let args = helper::split(helper::remove_parentheses(words[1]))?;
 	let mut new_vars = HashMap::new();
 	new_vars.insert("last".to_string(), Boolean(false));
 	for ((name, typ), &arg) in args_req.iter().zip(args.iter()) {
-		let split = helper::split(helper::remove_parens(arg))?;
+		let split = helper::split(helper::remove_parentheses(arg))?;
 		let parsed = variable::evaluate_statement(&split, variables)?;
 		variable::assert_type_of(&parsed, typ)?;
 		new_vars.insert(name.clone(), parsed);
@@ -131,7 +124,7 @@ fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	let mut lock = stdout.lock();
 	write!(lock, "> ")?;
 	for &word in words {
-		let result = variables.get(word).ok_or_else(|| perr(line!(), file!()))?;
+		let result = variables.get(word).ok_or(perrE!())?;
 		write!(lock, "{} ", result)?;
 	}
 	writeln!(lock)?;
@@ -165,8 +158,8 @@ fn jump(
 	labels: &Labels,
 	jump_next: &mut Option<usize>,
 ) -> Result<Variable, CustomErr> {
-	let &word = words.get(0).ok_or_else(|| perr(line!(), file!()))?;
-	let &target = labels.get(word).ok_or_else(|| perr(line!(), file!()))?;
+	let &word = words.get(0).ok_or(perrE!())?;
+	let &target = labels.get(word).ok_or(perrE!())?;
 	*jump_next = Some(target);
 	Ok(Boolean(true))
 }
@@ -210,7 +203,7 @@ pub fn run(mut code: Code) -> Result<(), CustomErr> {
 	variables.insert("last".to_owned(), Boolean(false));
 
 	loop {
-		let index = code.index + 1;
+		let index = code.index.wrapping_add(1);
 		let (input_line, interactive) = code.next_line()?;
 		let words = {
 			let words = helper::split(input_line.trim());
@@ -270,14 +263,10 @@ pub fn run(mut code: Code) -> Result<(), CustomErr> {
 			if interactive && creating_function == 0 && call_stack.is_empty() {
 				println!("> {}", &last);
 			}
-			*variables
-				.get_mut("last")
-				.ok_or_else(|| serr(line!(), file!()))? = last;
+			*variables.get_mut("last").ok_or(serrE!())? = last;
 		} else {
 			eprintln!("{:3}: {:?}", index, result);
-			*variables
-				.get_mut("last")
-				.ok_or_else(|| serr(line!(), file!()))? = Boolean(false);
+			*variables.get_mut("last").ok_or(serrE!())? = Boolean(false);
 		}
 		if let Some(target) = jump_next {
 			code.index = target;
