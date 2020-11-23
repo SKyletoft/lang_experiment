@@ -1,11 +1,13 @@
 use crate::*;
 
-pub struct Code {
-	pub code: Vec<String>,
+pub struct Code<'a> {
+	code_internal: String,
+	pub code: Vec<&'a str>,
 	pub index: usize,
+	pub ascii: bool
 }
 
-impl Code {
+impl<'a> Code<'a> {
 	pub fn from_file(file: &str) -> Result<Code, CustomErr> {
 		let mut code = Code::new();
 		code.import(file)?;
@@ -14,11 +16,17 @@ impl Code {
 
 	pub fn new() -> Self {
 		Code {
-			code: vec![String::new()],
+			code_internal: String::new(),
+			code: Vec::new(),
 			index: 0,
+			ascii: true
 		}
 	}
 
+	//PLAN: Move all the code into a single long string.
+	//Change the public code to a vector that only borrows slices from the non-public string.
+	//Do some maybe unsafe magic to have an array that can borrow while the string can be edited.
+	//Vector might have to store usize pairs for indexing rather than direct slices
 	pub fn import(&mut self, file: &str) -> Result<(), CustomErr> {
 		let mut file_content = fs::read_to_string(file)?.into_bytes();
 		for byte in file_content.iter_mut() {

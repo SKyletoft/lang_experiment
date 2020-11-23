@@ -1,6 +1,7 @@
 use crate::*;
 
 pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
+	let keep_closure = |slice: &str| slice.chars().any(|c| !c.is_whitespace());
 	let mut vec = Vec::new();
 	let mut parentheses = 0;
 	let mut brackets = 0;
@@ -10,7 +11,10 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 	for (i, c) in s.char_indices() {
 		match (brackets, parentheses, quotes, c) {
 			(0, 0, 0, '[') => {
-				vec.push(&s[start..i]);
+				let slice = &s[start..i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
 				start = i;
 				brackets += 1;
 			}
@@ -18,7 +22,10 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 				brackets += 1;
 			}
 			(1, 0, 0, ']') => {
-				vec.push(&s[start..=i]);
+				let slice = &s[start..=i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
 				start = i + 1;
 				brackets -= 1;
 			}
@@ -27,7 +34,10 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 			}
 
 			(0, 0, 0, '(') => {
-				vec.push(&s[start..i]);
+				let slice = &s[start..i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
 				start = i;
 				parentheses += 1;
 			}
@@ -35,7 +45,10 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 				parentheses += 1;
 			}
 			(0, 1, 0, ')') => {
-				vec.push(&s[start..=i]);
+				let slice = &s[start..=i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
 				start = i + 1;
 				parentheses -= 1;
 			}
@@ -44,18 +57,27 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 			}
 
 			(0, 0, 0, '"') if !escape => {
-				vec.push(&s[start..i]);
+				let slice = &s[start..i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
 				start = i;
 				quotes += 1;
 			}
 			(0, 0, 1, '"') if !escape => {
-				vec.push(&s[start..=i]);
+				let slice = &s[start..=i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
 				start = i + 1;
 				quotes -= 1;
 			}
 
 			(0, 0, 0, _) if c.is_whitespace() => {
-				vec.push(&s[start..i]);
+				let slice = &s[start..i];
+				if keep_closure(slice) {
+					vec.push(slice);
+				}
 				start = i + 1;
 			}
 
@@ -67,8 +89,10 @@ pub fn split(s: &'_ str) -> Result<Vec<&'_ str>, CustomErr> {
 		}
 		escape = false;
 	}
-	vec.push(&s[start..]);
-	vec.retain(|slice| slice.chars().any(|c| !c.is_whitespace()));
+	let slice = &s[start..];
+	if keep_closure(slice) {
+		vec.push(slice);
+	}
 	if parentheses == 0 && brackets == 0 && quotes == 0 {
 		Ok(vec)
 	} else {
