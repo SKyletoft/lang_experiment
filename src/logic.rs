@@ -30,10 +30,10 @@ fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable
 }
 
 fn create_labels(words: &[&str], labels: &mut Labels, index: usize) -> Result<Variable, CustomErr> {
-	if words.is_empty() {
+	if words.len() != 1 {
 		return Err(perr(line!(), file!()));
 	}
-	labels.insert(words[0].to_string(), index);
+	labels.insert(variable::owned_name(words.get(0))?, index);
 	Ok(Boolean(true))
 }
 
