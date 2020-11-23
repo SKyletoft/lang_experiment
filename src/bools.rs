@@ -25,18 +25,17 @@ fn get_left_and_right<'a>(
 	idx: &mut usize,
 	words: &mut Vec<Op<'a>>,
 	variables: &Variables,
-	ascii: bool,
 ) -> Result<(Op<'a>, Op<'a>), CustomErr> {
 	if *idx == 0 {
 		return Err(perr(line!(), file!()));
 	}
 	let left = match words.remove(*idx - 1) {
-		Unparsed(s) => Val(parse_or_get(s, variables, ascii)?),
+		Unparsed(s) => Val(parse_or_get(s, variables)?),
 		x => x,
 	};
 	*idx -= 1;
 	let right = match words.remove(*idx + 1) {
-		Unparsed(s) => Val(parse_or_get(s, variables, ascii)?),
+		Unparsed(s) => Val(parse_or_get(s, variables)?),
 		x => x,
 	};
 	Ok((left, right))
@@ -46,25 +45,20 @@ fn get_right<'a>(
 	idx: &usize,
 	words: &mut Vec<Op<'a>>,
 	variables: &Variables,
-	ascii: bool,
 ) -> Result<Op<'a>, CustomErr> {
 	if *idx >= words.len() - 1 {
 		return Err(perr(line!(), file!()));
 	}
 	let right = match words.remove(*idx + 1) {
-		Unparsed(s) => Val(parse_or_get(s, variables, ascii)?),
+		Unparsed(s) => Val(parse_or_get(s, variables)?),
 		x => x,
 	};
 	Ok(right)
 }
 
-fn parse_or_get(s: &str, variables: &Variables, ascii: bool) -> Result<Variable, CustomErr> {
+fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	let val = if helper::has_parentheses(s) {
-		variable::evaluate_statement(
-			&helper::split(helper::remove_parens(s), ascii)?,
-			variables,
-			ascii,
-		)?
+		variable::evaluate_statement(&helper::split(helper::remove_parens(s))?, variables)?
 	} else if let Some(n) = variables.get(s) {
 		n.clone()
 	} else if let Ok(n) = evaluate_bool(s) {
@@ -79,15 +73,15 @@ fn parse_or_get(s: &str, variables: &Variables, ascii: bool) -> Result<Variable,
 	}
 }
 
-fn eval_op(op: Op, variables: &Variables, ascii: bool) -> Result<bool, CustomErr> {
+fn eval_op(op: Op, variables: &Variables) -> Result<bool, CustomErr> {
 	Ok(match op {
-		And(l, r) => eval_op(*l, variables, ascii)? && eval_op(*r, variables, ascii)?,
-		Or(l, r) => eval_op(*l, variables, ascii)? || eval_op(*r, variables, ascii)?,
-		Xor(l, r) => eval_op(*l, variables, ascii)? ^ eval_op(*r, variables, ascii)?,
-		Eq(l, r) => eval_op(*l, variables, ascii)? == eval_op(*r, variables, ascii)?,
-		Not(l) => !eval_op(*l, variables, ascii)?,
+		And(l, r) => eval_op(*l, variables)? && eval_op(*r, variables)?,
+		Or(l, r) => eval_op(*l, variables)? || eval_op(*r, variables)?,
+		Xor(l, r) => eval_op(*l, variables)? ^ eval_op(*r, variables)?,
+		Eq(l, r) => eval_op(*l, variables)? == eval_op(*r, variables)?,
+		Not(l) => !eval_op(*l, variables)?,
 		Val(Boolean(x)) => x,
-		Unparsed(s) => variable::un_bool(&parse_or_get(s, variables, ascii)?)?,
+		Unparsed(s) => variable::un_bool(&parse_or_get(s, variables)?)?,
 		_ => return Err(perr(line!(), file!())),
 	})
 }
@@ -97,20 +91,15 @@ fn perform_all_of_operation<'a>(
 	variables: &Variables,
 	operator: &str,
 	operation_function: OpFnPtr<'a>,
-	ascii: bool,
 ) -> Result<(), CustomErr> {
 	while let Some(mut idx) = words.iter().position(|x| *x == Unparsed(operator)) {
-		let (left, right) = get_left_and_right(&mut idx, words, variables, ascii)?;
+		let (left, right) = get_left_and_right(&mut idx, words, variables)?;
 		words[idx] = operation_function(Box::new(left), Box::new(right));
 	}
 	Ok(())
 }
 
-pub fn evaluate_bools(
-	words: &[&str],
-	variables: &Variables,
-	ascii: bool,
-) -> Result<Variable, CustomErr> {
+pub fn evaluate_bools(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	let mut words: Vec<Op> = words.iter().map(|x| Unparsed(x)).collect();
 
 	let operator_fn_pair: [(&str, OpFnPtr); 4] = [
@@ -120,10 +109,10 @@ pub fn evaluate_bools(
 		("==", |lhs, rhs| Eq(lhs, rhs)),
 	];
 	for (operator, node_type) in operator_fn_pair.iter() {
-		perform_all_of_operation(&mut words, variables, operator, *node_type, ascii)?;
+		perform_all_of_operation(&mut words, variables, operator, *node_type)?;
 	}
 	while let Some(idx) = words.iter().position(|x| *x == Unparsed("!")) {
-		let right = get_right(&idx, &mut words, variables, ascii)?;
+		let right = get_right(&idx, &mut words, variables)?;
 		words[idx] = Not(Box::new(right));
 	}
 
@@ -131,5 +120,5 @@ pub fn evaluate_bools(
 		return Err(perr(line!(), file!()));
 	}
 
-	Ok(Boolean(eval_op(words.remove(0), variables, ascii)?))
+	Ok(Boolean(eval_op(words.remove(0), variables)?))
 }

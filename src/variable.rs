@@ -45,7 +45,7 @@ impl std::str::FromStr for VariableT {
 	type Err = CustomErr;
 	fn from_str(s: &str) -> Result<Self, Self::Err> {
 		let res = if helper::has_parentheses(s) {
-			let split = helper::split(helper::remove_parens(s), false)?;
+			let split = helper::split(helper::remove_parens(s))?;
 			match split.as_slice() {
 				["list", typ] => ListT(Box::new(typ.parse()?)),
 				[_, _] => return Err(terr(line!(), file!())),
@@ -133,23 +133,17 @@ pub fn un_list(var: Variable) -> Result<(VariableT, Vec<Variable>), CustomErr> {
 	}
 }
 
-pub fn evaluate_statement(
-	words: &[&str],
-	variables: &Variables,
-	ascii: bool,
-) -> Result<Variable, CustomErr> {
+pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	match words {
 		[] => Err(perr(line!(), file!())),
-		[s] if helper::has_parentheses(s) => evaluate_statement(
-			&helper::split(helper::remove_parens(words[0]), ascii)?,
-			variables,
-			ascii,
-		),
+		[s] if helper::has_parentheses(s) => {
+			evaluate_statement(&helper::split(helper::remove_parens(words[0]))?, variables)
+		}
 		[s] if variables.contains_key(*s) => Ok(variables.get(*s).expect("Unreachable?").clone()),
-		_ => floats::evaluate_floats(words, variables, ascii)
-			.or_else(|_| bools::evaluate_bools(words, variables, ascii))
-			.or_else(|_| chars::char_op(words, variables, ascii))
-			.or_else(|_| list::list_op(words, variables, ascii))
+		_ => floats::evaluate_floats(words, variables)
+			.or_else(|_| bools::evaluate_bools(words, variables))
+			.or_else(|_| chars::char_op(words, variables))
+			.or_else(|_| list::list_op(words, variables))
 			.map_err(|_| perr(line!(), file!())),
 	}
 }

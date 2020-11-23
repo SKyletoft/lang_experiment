@@ -1,10 +1,6 @@
 use crate::*;
 
-pub fn evaluate_list(
-	words: &[&str],
-	variables: &Variables,
-	ascii: bool,
-) -> Result<Variable, CustomErr> {
+pub fn evaluate_list(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	if words.len() != 1 {
 		return Err(perr(line!(), file!()));
 	}
@@ -15,17 +11,17 @@ pub fn evaluate_list(
 
 	let mut vec = Vec::new();
 	let typ;
-	let split = helper::split(helper::remove_parens(word), ascii)?;
+	let split = helper::split(helper::remove_parens(word))?;
 	let mut iter = split.iter();
 	if let Some(&var) = iter.next() {
-		let parsed = variable::evaluate_statement(&helper::split(var, ascii)?, variables, ascii)?;
+		let parsed = variable::evaluate_statement(&helper::split(var)?, variables)?;
 		typ = variable::to_type(&parsed);
 		vec.push(parsed);
 	} else {
 		return Err(perr(line!(), file!()));
 	}
 	for &token in iter {
-		let parsed = variable::evaluate_statement(&helper::split(token, ascii)?, variables, ascii)?;
+		let parsed = variable::evaluate_statement(&helper::split(token)?, variables)?;
 		if variable::to_type(&parsed) != typ {
 			return Err(perr(line!(), file!()));
 		}
@@ -98,21 +94,21 @@ pub fn get_item(list: Variable, index: Variable) -> Result<Variable, CustomErr> 
 	Ok(vec.remove(index))
 }
 
-pub fn list_op(words: &[&str], variables: &Variables, ascii: bool) -> Result<Variable, CustomErr> {
+pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	if words.is_empty() {
 		return Err(serr(line!(), file!()));
 	}
 	let first = words[0];
 	let words = &words[1..];
 	let list = if helper::is_list(first) {
-		evaluate_list(&[first], variables, ascii)?
+		evaluate_list(&[first], variables)?
 	} else if helper::is_string(first) {
 		evaluate_string(first)?
 	} else {
 		if words.is_empty() {
 			return Err(perr(line!(), file!()));
 		}
-		variable::evaluate_statement(&[first], variables, ascii)?
+		variable::evaluate_statement(&[first], variables)?
 	};
 	if !variable::to_type(&list).is_list_t() {
 		return Err(terr(line!(), file!()));
@@ -122,28 +118,15 @@ pub fn list_op(words: &[&str], variables: &Variables, ascii: bool) -> Result<Var
 	let val = match words {
 		[] => list,
 		["len"] => len,
-		["+", item] => add_to_list(
-			list,
-			len,
-			variable::evaluate_statement(&[item], variables, ascii)?,
-		)?,
+		["+", item] => add_to_list(list, len, variable::evaluate_statement(&[item], variables)?)?,
 		["+", index, item] => add_to_list(
 			list,
-			variable::evaluate_statement(&[index], variables, ascii)?,
-			variable::evaluate_statement(&[item], variables, ascii)?,
+			variable::evaluate_statement(&[index], variables)?,
+			variable::evaluate_statement(&[item], variables)?,
 		)?,
-		["-", index] => remove_from_list(
-			list,
-			variable::evaluate_statement(&[index], variables, ascii)?,
-		)?,
-		["++", rhs] => join_lists(
-			list,
-			variable::evaluate_statement(&[rhs], variables, ascii)?,
-		)?,
-		["@", index] => get_item(
-			list,
-			variable::evaluate_statement(&[index], variables, ascii)?,
-		)?,
+		["-", index] => remove_from_list(list, variable::evaluate_statement(&[index], variables)?)?,
+		["++", rhs] => join_lists(list, variable::evaluate_statement(&[rhs], variables)?)?,
+		["@", index] => get_item(list, variable::evaluate_statement(&[index], variables)?)?,
 		_ => return Err(perr(line!(), file!())),
 	};
 	Ok(val)

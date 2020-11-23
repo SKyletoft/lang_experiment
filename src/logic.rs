@@ -1,24 +1,20 @@
 use crate::*;
 
-fn create_variable(
-	words: &[&str],
-	variables: &mut Variables,
-	ascii: bool,
-) -> Result<Variable, CustomErr> {
+fn create_variable(words: &[&str], variables: &mut Variables) -> Result<Variable, CustomErr> {
 	let res = match &words[1..] {
 		[] => variables
 			.get("last")
 			.ok_or_else(|| serr(line!(), file!()))?
 			.clone(),
-		["=", ..] => variable::evaluate_statement(&words[2..], variables, ascii)?,
+		["=", ..] => variable::evaluate_statement(&words[2..], variables)?,
 		[typ, "=", ..] => {
 			let rest = &words[3..];
 			match typ.parse::<VariableT>()? {
-				NumberT => floats::evaluate_floats(rest, variables, ascii)?,
-				BooleanT => bools::evaluate_bools(rest, variables, ascii)?,
-				CharT => chars::char_op(rest, variables, ascii)?,
+				NumberT => floats::evaluate_floats(rest, variables)?,
+				BooleanT => bools::evaluate_bools(rest, variables)?,
+				CharT => chars::char_op(rest, variables)?,
 				ListT(typ) => {
-					let parsed = list::list_op(rest, variables, ascii)?;
+					let parsed = list::list_op(rest, variables)?;
 					if variable::to_type(&parsed) != *typ {
 						return Err(terr(line!(), file!()));
 					}
@@ -94,7 +90,6 @@ fn function_call(
 	call_stack: &mut CallStack,
 	index: usize,
 	jump_next: &mut Option<usize>,
-	ascii: bool,
 ) -> Result<Variable, CustomErr> {
 	if words.len() != 2 {
 		return Err(perr(line!(), file!()));
@@ -105,12 +100,12 @@ fn function_call(
 	let (args_req, pointer) = functions
 		.get(words[0])
 		.ok_or_else(|| perr(line!(), file!()))?;
-	let args = helper::split(helper::remove_parens(words[1]), ascii)?;
+	let args = helper::split(helper::remove_parens(words[1]))?;
 	let mut new_vars = HashMap::new();
 	new_vars.insert("last".to_string(), Boolean(false));
 	for ((name, typ), &arg) in args_req.iter().zip(args.iter()) {
-		let split = helper::split(helper::remove_parens(arg), ascii)?;
-		let parsed = variable::evaluate_statement(&split, variables, ascii)?;
+		let split = helper::split(helper::remove_parens(arg))?;
+		let parsed = variable::evaluate_statement(&split, variables)?;
 		if variable::to_type(&parsed) != *typ {
 			return Err(terr(line!(), file!()));
 		}
@@ -126,9 +121,8 @@ fn if_statement(
 	words: &[&str],
 	variables: &Variables,
 	skipping_if: &mut isize,
-	ascii: bool,
 ) -> Result<Variable, CustomErr> {
-	let parsed = variable::evaluate_statement(words, variables, ascii)?;
+	let parsed = variable::evaluate_statement(words, variables)?;
 	let b = variable::un_bool(&parsed)?;
 	if !b {
 		*skipping_if += 1;
@@ -148,8 +142,8 @@ fn print(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	Ok(Boolean(true))
 }
 
-fn print_string(words: &[&str], variables: &Variables, ascii: bool) -> Result<Variable, CustomErr> {
-	let (typ, vec) = variable::un_list(variable::evaluate_statement(words, variables, ascii)?)?;
+fn print_string(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	let (typ, vec) = variable::un_list(variable::evaluate_statement(words, variables)?)?;
 	if typ != CharT {
 		return Err(terr(line!(), file!()));
 	}
@@ -162,8 +156,8 @@ fn print_string(words: &[&str], variables: &Variables, ascii: bool) -> Result<Va
 	Ok(Boolean(true))
 }
 
-fn print_type(words: &[&str], variables: &Variables, ascii: bool) -> Result<Variable, CustomErr> {
-	let var = variable::evaluate_statement(words, variables, ascii)?;
+fn print_type(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	let var = variable::evaluate_statement(words, variables)?;
 	println!("> {}", variable::to_type(&var));
 	Ok(var)
 }
@@ -188,9 +182,8 @@ fn jump_rel(
 	variables: &Variables,
 	index: usize,
 	jump_next: &mut Option<usize>,
-	ascii: bool,
 ) -> Result<Variable, CustomErr> {
-	let n = variable::un_number(&variable::evaluate_statement(words, variables, ascii)?)?;
+	let n = variable::un_number(&variable::evaluate_statement(words, variables)?)?;
 	*jump_next = Some((index as isize).saturating_add(n as isize) as usize);
 	Ok(Number(n))
 }
@@ -202,12 +195,9 @@ fn solve_function_or_variable(
 	call_stack: &mut CallStack,
 	index: usize,
 	jump_next: &mut Option<usize>,
-	ascii: bool,
 ) -> Result<Variable, CustomErr> {
-	function_call(
-		words, variables, functions, call_stack, index, jump_next, ascii,
-	)
-	.or_else(|_| variable::evaluate_statement(words, variables, ascii))
+	function_call(words, variables, functions, call_stack, index, jump_next)
+		.or_else(|_| variable::evaluate_statement(words, variables))
 }
 
 pub fn run(mut code: Code) -> Result<(), CustomErr> {
@@ -227,9 +217,9 @@ pub fn run(mut code: Code) -> Result<(), CustomErr> {
 
 	loop {
 		let index = code.index + 1;
-		let (input_line, interactive, ascii) = code.next_line()?;
+		let (input_line, interactive) = code.next_line()?;
 		let words = {
-			let words = helper::split(input_line.trim(), ascii);
+			let words = helper::split(input_line.trim());
 			if words.is_err() {
 				eprintln!("{:3}: {:?}", index, words);
 				continue;
@@ -260,19 +250,19 @@ pub fn run(mut code: Code) -> Result<(), CustomErr> {
 			"exit" => {
 				return Ok(());
 			}
-			"let" => create_variable(rest, &mut variables, ascii),
-			"if" => if_statement(rest, &variables, &mut skipping_if, ascii),
+			"let" => create_variable(rest, &mut variables),
+			"if" => if_statement(rest, &variables, &mut skipping_if),
 			"endif" => Ok(Boolean(true)),
 			"print" => print(rest, &variables),
 			"clear" => clear(),
 			"label" => create_labels(rest, &mut labels, index),
 			"jump" => jump(rest, &labels, &mut jump_next),
-			"jump_rel" => jump_rel(rest, &variables, index, &mut jump_next, ascii),
-			"type" => print_type(rest, &variables, ascii),
+			"jump_rel" => jump_rel(rest, &variables, index, &mut jump_next),
+			"type" => print_type(rest, &variables),
 			"end" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
 			"return" => exit_function(&mut variables, &mut call_stack, &mut jump_next),
 			"fn" => create_function(rest, &mut functions, index, &mut creating_function),
-			"puts" => print_string(rest, &variables, ascii),
+			"puts" => print_string(rest, &variables),
 			_ => solve_function_or_variable(
 				&words,
 				&mut variables,
@@ -280,7 +270,6 @@ pub fn run(mut code: Code) -> Result<(), CustomErr> {
 				&mut call_stack,
 				index,
 				&mut jump_next,
-				ascii,
 			),
 		};
 		if let Ok(last) = result {
