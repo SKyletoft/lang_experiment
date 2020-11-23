@@ -24,10 +24,19 @@ impl Code {
 
 	pub fn import(&mut self, file: &str) -> Result<(), CustomErr> {
 		let mut file_content = fs::read_to_string(file)?.into_bytes();
+		let mut is_comment = false;
 		for byte in file_content.iter_mut() {
 			*byte = match *byte {
-				b'\n' => b' ',
+				b'\n' => {
+					is_comment = false;
+					b' '
+				}
+				b'#' => {
+					is_comment = true;
+					b' '
+				}
 				b';' => b'\n',
+				_ if is_comment => b' ',
 				c => c,
 			}
 		}
@@ -39,8 +48,16 @@ impl Code {
 	}
 
 	fn push_line(&mut self, line: &str) {
+		let comment_start = line
+			.chars()
+			.position(|c| c == '#')
+			.unwrap_or_else(|| line.len());
+		let trimmed = (&line[..comment_start]).trim();
+		if trimmed.is_empty() {
+			return;
+		}
 		let line_start = self.code_internal.len();
-		self.code_internal.push_str(line);
+		self.code_internal.push_str(trimmed);
 		self.code.push((line_start, self.code_internal.len()));
 	}
 

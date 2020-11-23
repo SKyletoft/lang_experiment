@@ -1,15 +1,15 @@
-fn prime_gen max num;
-	let primes = [2 3 5 7 11 13];
-	let candidate = 13;
-	label loop_start;
-		let length = primes len;
-		let candidate = candidate + 2;
-		let index = 0;
-		if length == max;
-			primes;
-			return;
-		endif;
-		label prime_test;
+fn prime_gen max num;					# start of function									
+	let primes = [2 3 5 7 11 13];		# the first six primes to get started				
+	let candidate = 13;					# the variable containing the number we're testing	
+	label loop_start;					# start of the loop									
+		let length = primes len;		# cache the length instead of calling len in a loop	
+		let candidate = candidate + 2;	# iterate the candidate (and avoid all even numbers)
+		let index = 0;					# the index into primes								
+		if length == max;				# check if we're done								
+			primes;						# yeah, return statements are weird					
+			return;						# I've run out of stuff to say						
+		endif;							# These comments are here to test comments			
+		label prime_test;				# and not to document the code						
 			if index == length;
 				let primes = primes + candidate;
 				jump loop_start;

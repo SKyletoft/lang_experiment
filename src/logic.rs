@@ -206,7 +206,7 @@ pub fn run(mut code: Code) -> Result<(), CustomErr> {
 		let index = code.index.wrapping_add(1);
 		let (input_line, interactive) = code.next_line()?;
 		let words = {
-			let words = helper::split(input_line.trim());
+			let words = helper::split(input_line);
 			if words.is_err() {
 				eprintln!("{:3}: {:?}", index, words);
 				continue;
