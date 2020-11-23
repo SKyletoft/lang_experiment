@@ -114,6 +114,7 @@ fn function_call(
 	call_stack.push((variables.clone(), index));
 	*variables = new_vars;
 	*jump_next = Some(*pointer);
+	dbg!(variables);
 	Ok(Boolean(false))
 }
 
