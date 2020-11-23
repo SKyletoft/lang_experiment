@@ -101,6 +101,7 @@ pub fn to_type(var: &Variable) -> VariableT {
 pub fn assert_type_of(var: &Variable, typ: &VariableT) -> Result<(), CustomErr> {
 	assert_type(&to_type(var), typ)
 }
+
 pub fn assert_list_type_of(var: &Variable) -> Result<(), CustomErr> {
 	assert_list_type(&to_type(var))
 }
@@ -128,6 +129,7 @@ pub fn un_number(var: &Variable) -> Result<f64, CustomErr> {
 		terr!()
 	}
 }
+
 pub fn un_bool(var: &Variable) -> Result<bool, CustomErr> {
 	if let Boolean(n) = var {
 		Ok(*n)
@@ -135,6 +137,7 @@ pub fn un_bool(var: &Variable) -> Result<bool, CustomErr> {
 		terr!()
 	}
 }
+
 pub fn un_char(var: &Variable) -> Result<char, CustomErr> {
 	if let Char(n) = var {
 		Ok(*n)
@@ -142,6 +145,7 @@ pub fn un_char(var: &Variable) -> Result<char, CustomErr> {
 		terr!()
 	}
 }
+
 pub fn un_list(var: Variable) -> Result<(VariableT, Vec<Variable>), CustomErr> {
 	if let List(t, v) = var {
 		Ok((t, v))
@@ -153,15 +157,16 @@ pub fn un_list(var: Variable) -> Result<(VariableT, Vec<Variable>), CustomErr> {
 pub fn evaluate_statement(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	match words {
 		[] => perr!(),
-		[s] if helper::has_parentheses(s) => {
-			evaluate_statement(&helper::split(helper::remove_parentheses(words[0]))?, variables)
-		}
+		[s] if helper::has_parentheses(s) => evaluate_statement(
+			&helper::split(helper::remove_parentheses(words[0]))?,
+			variables,
+		),
 		[s] if variables.contains_key(*s) => Ok(variables.get(*s).expect("Unreachable?").clone()),
-		_ => floats::evaluate_floats(words, variables)
-			.or_else(|_| bools::evaluate_bools(words, variables))
-			.or_else(|_| chars::char_op(words, variables))
+		_ => Err(Box::new(perrE!()) as Box<dyn std::error::Error>)
+			.or_else(|_| floats::evaluate_floats(words, variables))
 			.or_else(|_| list::list_op(words, variables))
-			.map_err(|_| Box::new(perrE!()) as Box<dyn std::error::Error>),
+			.or_else(|_| bools::evaluate_bools(words, variables))
+			.or_else(|_| chars::char_op(words, variables)),
 	}
 }
 

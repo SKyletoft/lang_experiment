@@ -135,5 +135,5 @@ fn logic_parse(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 }
 
 pub fn evaluate_floats(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	order_of_operations_parse(words, variables).or_else(|_| logic_parse(words, variables))
+	logic_parse(words, variables).or_else(|_| order_of_operations_parse(words, variables))
 }
