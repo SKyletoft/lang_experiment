@@ -66,11 +66,8 @@ pub fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomEr
 	} else {
 		return perr!();
 	};
-	if variable::to_type(&val) == NumberT {
-		Ok(val)
-	} else {
-		terr!()
-	}
+	variable::assert_type_of(&val, &NumberT)?;
+	Ok(val)
 }
 
 fn eval_op(op: Op, variables: &Variables) -> Result<f64, CustomErr> {
@@ -131,12 +128,10 @@ fn logic_parse(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 		">" => |l, r| l > r,
 		_ => return perr!(),
 	};
-	let lhs = variable::evaluate_statement(&words[0..1], variables)?;
-	let rhs = variable::evaluate_statement(&words[2..3], variables)?;
-	let lhs_n = variable::un_number(&lhs)?;
-	let rhs_n = variable::un_number(&rhs)?;
+	let lhs = variable::un_number(&variable::evaluate_statement(&words[0..1], variables)?)?;
+	let rhs = variable::un_number(&variable::evaluate_statement(&words[2..3], variables)?)?;
 
-	Ok(Boolean(f(lhs_n, rhs_n)))
+	Ok(Boolean(f(lhs, rhs)))
 }
 
 pub fn evaluate_floats(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {

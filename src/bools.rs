@@ -66,11 +66,8 @@ fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	} else {
 		return perr!();
 	};
-	if variable::to_type(&val) == BooleanT {
-		Ok(val)
-	} else {
-		terr!()
-	}
+	variable::assert_type_of(&val, &BooleanT)?;
+	Ok(val)
 }
 
 fn eval_op(op: Op, variables: &Variables) -> Result<bool, CustomErr> {

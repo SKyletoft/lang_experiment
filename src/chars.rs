@@ -22,11 +22,8 @@ fn parse_or_get(s: &str, variables: &Variables) -> Result<Variable, CustomErr> {
 	} else {
 		return perr!();
 	};
-	if variable::to_type(&val) == CharT {
-		Ok(val)
-	} else {
-		terr!()
-	}
+	variable::assert_type_of(&val, &CharT)?;
+	Ok(val)
 }
 
 pub fn char_op(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {

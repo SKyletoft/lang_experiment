@@ -103,9 +103,7 @@ pub fn list_op(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 		}
 		variable::evaluate_statement(&[first], variables)?
 	};
-	if !variable::to_type(&list).is_list_t() {
-		return terr!();
-	}
+	variable::assert_list_type_of(&list)?;
 
 	let len = Number(list_len(&list)? as f64);
 	let val = match words {

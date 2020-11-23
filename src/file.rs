@@ -3,7 +3,7 @@ use crate::*;
 #[derive(Clone, Debug, PartialEq)]
 pub struct Code {
 	code_internal: String,
-	pub code: Vec<(usize, usize)>,
+	code: Vec<(usize, usize)>,
 	pub index: usize,
 }
 

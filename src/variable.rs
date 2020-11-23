@@ -89,12 +89,6 @@ impl From<Variable> for VariableT {
 	}
 }
 
-impl VariableT {
-	pub fn is_list_t(&self) -> bool {
-		matches!(self, &ListT(_))
-	}
-}
-
 pub fn to_type(var: &Variable) -> VariableT {
 	match var {
 		Number(_) => NumberT,
@@ -107,9 +101,20 @@ pub fn to_type(var: &Variable) -> VariableT {
 pub fn assert_type_of(var: &Variable, typ: &VariableT) -> Result<(), CustomErr> {
 	assert_type(&to_type(var), typ)
 }
+pub fn assert_list_type_of(var: &Variable) -> Result<(), CustomErr> {
+	assert_list_type(&to_type(var))
+}
 
 pub fn assert_type(t1: &VariableT, t2: &VariableT) -> Result<(), CustomErr> {
 	if *t1 == *t2 {
+		Ok(())
+	} else {
+		terr!()
+	}
+}
+
+pub fn assert_list_type(t: &VariableT) -> Result<(), CustomErr> {
+	if let ListT(_) = t {
 		Ok(())
 	} else {
 		terr!()
