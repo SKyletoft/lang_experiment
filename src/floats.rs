@@ -7,6 +7,7 @@ enum Op<'a> {
 	Mul(Box<Op<'a>>, Box<Op<'a>>),
 	Div(Box<Op<'a>>, Box<Op<'a>>),
 	Mod(Box<Op<'a>>, Box<Op<'a>>),
+	Pow(Box<Op<'a>>, Box<Op<'a>>),
 	Val(Variable),
 	Unparsed(&'a str),
 }
@@ -77,6 +78,7 @@ fn eval_op(op: Op, variables: &Variables) -> Result<f64, CustomErr> {
 		Mul(l, r) => eval_op(*l, variables)? * eval_op(*r, variables)?,
 		Div(l, r) => eval_op(*l, variables)? / eval_op(*r, variables)?,
 		Mod(l, r) => eval_op(*l, variables)? % eval_op(*r, variables)?,
+		Pow(l, r) => eval_op(*l, variables)?.powf(eval_op(*r, variables)?),
 		Val(Number(x)) => x,
 		Unparsed(s) => variable::un_number(&parse_or_get(s, variables)?)?,
 		_ => return perr!(),
@@ -99,7 +101,8 @@ fn perform_all_of_operation<'a>(
 fn order_of_operations_parse(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
 	let mut words: Vec<Op> = words.iter().map(|x| Unparsed(x)).collect();
 
-	let operator_fn_pair: [(&str, OpFnPtr); 5] = [
+	let operator_fn_pair: [(&str, OpFnPtr); 6] = [
+		("^", |lhs, rhs| Pow(lhs, rhs)),
 		("*", |lhs, rhs| Mul(lhs, rhs)),
 		("/", |lhs, rhs| Div(lhs, rhs)),
 		("%", |lhs, rhs| Mod(lhs, rhs)),
@@ -118,10 +121,12 @@ fn order_of_operations_parse(words: &[&str], variables: &Variables) -> Result<Va
 }
 
 fn logic_parse(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	let words = words.get(..3).ok_or(perrE!())?;
+	if words.len() != 3 {
+		return perr!();
+	}
 	let op = words[1];
-	let f = match op {
-		"==" => |l: f64, r: f64| (l - r).abs() < f64::EPSILON,
+	let f: fn(f64, f64) -> bool = match op {
+		"==" => |l, r| (l - r).abs() < f64::EPSILON,
 		"<=" => |l, r| l <= r,
 		">=" => |l, r| l >= r,
 		"<" => |l, r| l < r,
@@ -134,6 +139,21 @@ fn logic_parse(words: &[&str], variables: &Variables) -> Result<Variable, Custom
 	Ok(Boolean(f(lhs, rhs)))
 }
 
+fn round_parse(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
+	if words.len() != 2 {
+		return perr!();
+	}
+	let f: fn(f64) -> f64 = match words[0] {
+		"floor" => |x| x.floor(),
+		"ceil" => |x| x.ceil(),
+		"round" => |x| x.round(),
+		"sqrt" => |x| x.sqrt(),
+		_ => return perr!(),
+	};
+	let num = variable::un_number(&variable::evaluate_statement(&words[1..2], variables)?)?;
+	Ok(Number(f(num)))
+}
+
 pub fn evaluate_floats(words: &[&str], variables: &Variables) -> Result<Variable, CustomErr> {
-	logic_parse(words, variables).or_else(|_| order_of_operations_parse(words, variables))
+	logic_parse(words, variables).or_else(|_| round_parse(words, variables)).or_else(|_| order_of_operations_parse(words, variables))
 }
